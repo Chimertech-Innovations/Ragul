@@ -1,0 +1,3417 @@
+{
+  "schema_version": "4.0",
+  "catalog_name": "RAGUL Chimertech Cattle Product Recommendation Knowledge Base",
+  "generated_on": "2026-10-07",
+  "intended_path": "d:\\Ragul Ai\\backend\\data\\knowledge_base\\products_catalog.json",
+  "store_scope": "Only products listed on chimertech.shop",
+  "statistics": {
+    "product_records": 75,
+    "recommendation_scenarios": 34,
+    "direct_farmer_question_phrasings": 92,
+    "categories": 5
+  },
+  "agent_rules": {
+    "recommend_only_product_ids_in_this_file": true,
+    "never_invent_product_name": true,
+    "never_force_product_when_not_relevant": true,
+    "education_before_sales": true,
+    "clinical_red_flags_before_product": true,
+    "never_claim_a_product_guarantees_prevention_or_cure": true,
+    "no_autonomous_antibiotic_or_prescription_drug_selection": true,
+    "no_unverified_dosage": true,
+    "fetch_live_store_page_for_price_stock_and_exact_current_usage": true,
+    "if_question_is_general_veterinary": "Answer from veterinary_qa.json first. Then call this catalog only if a relevant Chimertech product exists.",
+    "if_question_is_product_specific": "Retrieve product record plus matching recommendation scenario.",
+    "if_question_mentions_emergency_red_flags": "Do not lead with a product. Give urgent veterinary/safety action first.",
+    "answer_style": "Simple farmer language; explain problem, action, product, reason, warning."
+  },
+  "retrieval": {
+    "embed_fields": [
+      "name",
+      "role",
+      "use_cases",
+      "safe_answer"
+    ],
+    "scenario_embed_fields": [
+      "intent",
+      "farmer_questions",
+      "answer_logic"
+    ],
+    "initial_top_k": 10,
+    "rerank_to": 3,
+    "deduplicate_by": [
+      "role",
+      "product_id"
+    ]
+  },
+  "products": [
+    {
+      "product_id": "P001",
+      "name": "Quadmastest Device",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "mastitis_screening",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "mastitis detection",
+        "udder health screening",
+        "quarter-wise screening"
+      ],
+      "safe_answer": "Use as a mastitis-screening device according to the current product instructions. A screening result does not replace veterinary diagnosis.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P002",
+      "name": "Quadmastest Pro Portable Wireless Thermal Printer",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "mastitis_screening_printing",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "mastitis detection",
+        "quarter-wise screening",
+        "printed test result"
+      ],
+      "safe_answer": "Use for mastitis screening and printed records according to the device instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P003",
+      "name": "Chimertech CMT Kit 500 ml with paddle",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "cmt_screening",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "subclinical mastitis screening",
+        "CMT",
+        "quarter-wise milk test"
+      ],
+      "safe_answer": "Use for cow-side CMT screening. Interpret suspicious results with the cow's clinical condition and herd protocol.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P004",
+      "name": "Chimertech CMT Kit 1 Litre with Paddle and dispenser",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "cmt_screening",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "subclinical mastitis screening",
+        "CMT",
+        "herd screening"
+      ],
+      "safe_answer": "Use for cow-side CMT screening according to the product directions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P005",
+      "name": "Chimertech CMT Kit 5 litre",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "cmt_bulk_farm",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "larger farm CMT use",
+        "subclinical mastitis screening"
+      ],
+      "safe_answer": "Larger pack intended for repeated CMT screening use.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P006",
+      "name": "Chimertech CMT Kit 20 litre",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Mastitis Detection",
+      "role": "cmt_bulk_farm",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "large herd CMT use",
+        "subclinical mastitis screening"
+      ],
+      "safe_answer": "Large-volume CMT reagent for herd screening programs.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P007",
+      "name": "Mastitis indicator for milking machines.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "machine_mastitis_indicator",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "visual clot monitoring",
+        "machine milking mastitis indicator"
+      ],
+      "safe_answer": "Use as a visual milk-line indicator. It should not be used to rule out subclinical mastitis.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P008",
+      "name": "FineKine 1 kg",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "post_milking_teat_hygiene",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "post-milking teat care",
+        "mastitis prevention routine",
+        "teat barrier"
+      ],
+      "safe_answer": "Use after milking according to the current label as part of a complete udder-hygiene program.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P009",
+      "name": "FineKine 1 kg with dip cup",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "post_milking_teat_hygiene",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "post-milking teat care",
+        "teat dipping",
+        "mastitis prevention routine"
+      ],
+      "safe_answer": "Post-milking teat-care pack with dip cup. Follow the current label.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P010",
+      "name": "MooFoam 1Kg",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "pre_milking_teat_hygiene",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "pre-milking teat cleaning",
+        "teat hygiene",
+        "udder hygiene"
+      ],
+      "safe_answer": "Use for pre-milking teat cleaning according to the current product instructions, then dry teats before attaching the milking unit.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P011",
+      "name": "MooFoam 1Kg with Dip Cup Combo",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "pre_milking_teat_hygiene",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "pre-milking teat cleaning",
+        "teat hygiene",
+        "dip cup"
+      ],
+      "safe_answer": "Use for the pre-milking teat-hygiene step according to the current label.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P012",
+      "name": "Iodokine 1L",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "iodine_post_milking_teat_dip",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "post-milking teat dip",
+        "iodine teat hygiene",
+        "udder hygiene"
+      ],
+      "safe_answer": "Iodine-based post-milking teat dip. Use according to the current product label.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P013",
+      "name": "Iogiene 1Kg",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Prevention",
+      "role": "teat_hygiene",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "teat hygiene",
+        "udder hygiene",
+        "mastitis prevention routine"
+      ],
+      "safe_answer": "Use only for the role stated on the current product label; do not present it as treatment for a systemically sick cow.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P014",
+      "name": "Mastoveda Spray 200 ml",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Ethnoveterinary Medicine",
+      "role": "udder_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "udder support",
+        "mastitis support",
+        "udder comfort"
+      ],
+      "safe_answer": "Supportive topical udder-care product. It must not delay veterinary assessment of clinical mastitis.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P015",
+      "name": "H-Udderon, Herbal Teat Spray for Mastitis prevention.",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Ethnoveterinary Medicine",
+      "role": "teat_spray",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "teat hygiene",
+        "mastitis prevention routine",
+        "herbal teat spray"
+      ],
+      "safe_answer": "Use as a teat-care product according to its current label; do not claim it cures active severe mastitis.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P016",
+      "name": "Tic Tick Tic 200ml Spray",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Ethnoveterinary Medicine",
+      "role": "tick_control",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "ticks",
+        "external parasites",
+        "tick management"
+      ],
+      "safe_answer": "Use for tick-management only according to the current label. Severe anemia, fever, weakness or dark urine needs veterinary evaluation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P017",
+      "name": "Tick Talc 500 g",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Ethnoveterinary Medicine",
+      "role": "tick_control",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "ticks",
+        "external parasites",
+        "tick management"
+      ],
+      "safe_answer": "Use according to the current label as part of an integrated tick-control program.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P018",
+      "name": "Estrus Gun Cattle",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "Detection / Field Test",
+      "role": "estrus_detection",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "heat detection",
+        "estrus detection",
+        "breeding timing"
+      ],
+      "safe_answer": "Use to support heat detection together with behavior, records and breeding advice.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P019",
+      "name": "PregKine Bovine Pregnancy Rapid Test - 1 Test",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "Detection / Field Test",
+      "role": "pregnancy_testing",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "pregnancy test",
+        "pregnancy screening",
+        "post-breeding check"
+      ],
+      "safe_answer": "Use according to the validated testing window and current instructions. Do not use a result outside its intended testing window.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P020",
+      "name": "PregKine Bovine Pregnancy Rapid Test - 20 Test",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "Detection / Field Test",
+      "role": "pregnancy_testing",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "pregnancy test",
+        "herd pregnancy screening",
+        "post-breeding check"
+      ],
+      "safe_answer": "Pack for repeated bovine pregnancy testing according to current instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P021",
+      "name": "Digital artificial insemination gun with camera for cattle and horse.",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "AI Equipment",
+      "role": "artificial_insemination",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "artificial insemination",
+        "AI gun",
+        "breeding equipment",
+        "camera AI gun"
+      ],
+      "safe_answer": "Professional breeding equipment. Use only by appropriately trained personnel.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P022",
+      "name": "Portable Liquid Nitrogen [LN2] Container for Cattle Semen Storage 2 Litre",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "AI Equipment",
+      "role": "semen_storage",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "semen storage",
+        "liquid nitrogen",
+        "AI semen"
+      ],
+      "safe_answer": "Use for semen storage according to cryogenic safety and breeding protocols.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P023",
+      "name": "Semen thawer",
+      "brand": "Chimertech",
+      "category": "Breeding",
+      "subcategory": "AI Equipment",
+      "role": "semen_thawing",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "semen thawing",
+        "artificial insemination preparation"
+      ],
+      "safe_answer": "Use for controlled semen thawing according to the semen supplier and AI protocol.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P024",
+      "name": "Mineral Max (1 Kg)",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "mineral_supplement",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "mineral supplementation",
+        "cattle minerals",
+        "ration support"
+      ],
+      "safe_answer": "Use as a cattle mineral supplement according to the product label and ration plan. Do not diagnose a mineral deficiency from symptoms alone.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P025",
+      "name": "NutraKine Calcdex 1L",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "calcium_mineral_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "calcium support",
+        "mineral support",
+        "transition cow nutrition"
+      ],
+      "safe_answer": "Use as a nutritional supplement according to the product label. A down cow around calving is an emergency and needs veterinary assessment.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P026",
+      "name": "NutraKine Calfster 500 ml",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Calf Supplement",
+      "role": "calf_nutrition_support",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "calf supplement",
+        "calf growth support",
+        "young calf nutrition"
+      ],
+      "safe_answer": "Use as a calf supplement according to the current label and feeding plan.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P027",
+      "name": "NutraKine D-Wormer 100 ml",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "deworming_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "deworming",
+        "internal parasites",
+        "worm control"
+      ],
+      "safe_answer": "Use only according to the current product label and veterinary parasite-control plan. Avoid repeated blind deworming.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P028",
+      "name": "NutraKine Fertility Booster 500 g",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "fertility_nutrition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "fertility nutrition",
+        "breeding support",
+        "reproductive nutrition"
+      ],
+      "safe_answer": "Use as nutritional support according to the current label. Persistent infertility or anestrus requires reproductive evaluation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P029",
+      "name": "NutraKine Gain 500 g",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "growth_body_condition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "weight gain support",
+        "body condition",
+        "growth nutrition"
+      ],
+      "safe_answer": "Use as a nutritional supplement according to the current label and a balanced ration.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P030",
+      "name": "NutraKine Liver Tonic 1 litre",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "liver_nutrition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "liver support",
+        "appetite support",
+        "nutritional support"
+      ],
+      "safe_answer": "Use according to the current label. Persistent poor appetite needs diagnosis rather than supplement-only management.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P031",
+      "name": "NutraKine MastoVita 200ml",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "udder_nutrition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "udder nutritional support",
+        "mastitis support program"
+      ],
+      "safe_answer": "Use according to the current product label as nutritional/supportive care, not as a substitute for diagnosis.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P032",
+      "name": "NutraKine Milk Booster 500 g",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "milk_production_nutrition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milk production support",
+        "lactation nutrition",
+        "milk yield"
+      ],
+      "safe_answer": "Use as nutritional support according to the label. First investigate sudden milk drops for disease, water, heat, feed intake and stage of lactation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P033",
+      "name": "NutraKine Phos+ 300 g",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Cattle Supplement",
+      "role": "phosphorus_nutrition_support",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "phosphorus support",
+        "mineral nutrition",
+        "cattle nutrition"
+      ],
+      "safe_answer": "Use according to the product label and ration plan; avoid assuming phosphorus deficiency without nutritional assessment.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P034",
+      "name": "Probos+ Chimertech (500g)",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Calf Supplement",
+      "role": "calf_nutrition_support",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "calf nutrition",
+        "young stock support"
+      ],
+      "safe_answer": "Use according to the current product label and calf feeding plan.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P035",
+      "name": "ServaTac-Milk replacer for calf. 10kg",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Calf Supplement",
+      "role": "calf_milk_replacer",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "calf milk replacer",
+        "calf feeding",
+        "orphan calf feeding"
+      ],
+      "safe_answer": "Prepare and feed strictly according to the product instructions. Colostrum remains essential for newborn calves.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P036",
+      "name": "ServaTac-Milk replacer for calf. 25kg",
+      "brand": "Chimertech",
+      "category": "Nutrition",
+      "subcategory": "Calf Supplement",
+      "role": "calf_milk_replacer",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "calf milk replacer",
+        "large calf feeding program"
+      ],
+      "safe_answer": "Large pack for calf milk-replacer feeding according to the current mixing and feeding instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P037",
+      "name": "Calf feeding bottle.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Managements",
+      "role": "calf_feeding",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "bottle feeding calf",
+        "calf milk feeding"
+      ],
+      "safe_answer": "Use for hygienic calf milk/colostrum feeding; clean and disinfect between calves.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P038",
+      "name": "Calf milk feeding bottle rubber nipple.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Managements",
+      "role": "calf_feeding_accessory",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "calf bottle nipple",
+        "replacement calf feeder nipple"
+      ],
+      "safe_answer": "Use as the appropriate feeding-bottle accessory and keep it clean.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P039",
+      "name": "Calf Milk Feeding Bucket, 5 Nipples and 8 LTR capacity.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Managements",
+      "role": "group_calf_feeding",
+      "species": [
+        "calf",
+        "cattle"
+      ],
+      "use_cases": [
+        "feeding multiple calves",
+        "calf feeding bucket"
+      ],
+      "safe_answer": "Use for group calf feeding with strict cleaning to reduce cross-contamination.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P040",
+      "name": "Anti kick bar",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "safe_restraint",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cow kicking during milking",
+        "milking safety",
+        "temporary restraint"
+      ],
+      "safe_answer": "Use for safe temporary restraint according to instructions. Do not use excessive force or use it to ignore pain causing kicking.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P041",
+      "name": "Rubber Mat for Cows 17 mm",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "cow_comfort_flooring",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cow comfort",
+        "flooring",
+        "slip reduction",
+        "standing comfort"
+      ],
+      "safe_answer": "Use as cattle-comfort flooring; maintain cleanliness and drainage.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P042",
+      "name": "Rubber Mat for Cows Interlocked",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "cow_comfort_flooring",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cow comfort",
+        "flooring",
+        "interlocking mat"
+      ],
+      "safe_answer": "Use as cattle-comfort flooring and maintain hygiene and drainage.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P043",
+      "name": "Drinking bowl.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "water_access",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cow drinking bowl",
+        "water access",
+        "automatic watering"
+      ],
+      "safe_answer": "Use to improve reliable water access; clean regularly and check flow.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P044",
+      "name": "Plastic unbreakable automatic cow drinking water bowl dispenser, green.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "water_access",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "automatic cow water bowl",
+        "water access"
+      ],
+      "safe_answer": "Use for automatic water access; routinely check flow and cleanliness.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P045",
+      "name": "Stainless Steel water bowl.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "water_access",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "stainless cow water bowl",
+        "water access"
+      ],
+      "safe_answer": "Use for cattle water access; clean regularly and ensure adequate flow.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P046",
+      "name": "RFID Eartags Pack of 10",
+      "brand": "Chimertech",
+      "category": "Herd management",
+      "subcategory": "Animal ID",
+      "role": "animal_identification",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "RFID cattle identification",
+        "cow ID",
+        "herd tracking"
+      ],
+      "safe_answer": "Use for unique cattle identification and linkage to herd records.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P047",
+      "name": "RFID Reader",
+      "brand": "Chimertech",
+      "category": "Herd management",
+      "subcategory": "Animal ID",
+      "role": "animal_identification_reader",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "read RFID tags",
+        "cattle identification",
+        "herd records"
+      ],
+      "safe_answer": "Use to read compatible RFID animal IDs and link cattle to digital records.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P048",
+      "name": "Digital veterinary thermometer with flexible tip-pet health monitoring.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Veterinarian Use",
+      "role": "temperature_monitoring",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cow temperature",
+        "fever check",
+        "calf temperature"
+      ],
+      "safe_answer": "Use to measure body temperature appropriately. Abnormal temperature should be interpreted with clinical signs.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P049",
+      "name": "Hoof knife for cow, horse and goat.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Veterinarian Use",
+      "role": "hoof_care",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "hoof trimming",
+        "hoof lesion inspection",
+        "hoof care"
+      ],
+      "safe_answer": "Use only if trained in hoof care; severe lameness or deep lesions need professional evaluation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P050",
+      "name": "Horn Sleeve – Medium",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "horn_protection",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "horn cover",
+        "horn protection",
+        "reduce horn injury risk"
+      ],
+      "safe_answer": "Use as a horn-protection accessory with proper fit and regular inspection.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P051",
+      "name": "Horn Sleeve – Small",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Cattle Comfort",
+      "role": "horn_protection",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "horn cover",
+        "small horn protection"
+      ],
+      "safe_answer": "Use as a horn-protection accessory with proper fit and regular inspection.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P052",
+      "name": "Off -Horn(Dehorning Paste) 3 Grams.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Managements",
+      "role": "dehorning_product",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "dehorning calf",
+        "horn bud management"
+      ],
+      "safe_answer": "Dehorning is a welfare-sensitive procedure. Use only according to label, age limits, pain-management standards, and professional guidance.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P053",
+      "name": "Milking Machine Dairy Flow 200",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking machine",
+        "machine milking",
+        "dairy milking"
+      ],
+      "safe_answer": "Use for machine milking with correct vacuum, pulsation, liner maintenance, hygiene and operator training.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P054",
+      "name": "Milking Machine Ecomilk 150BS",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking machine",
+        "small dairy milking"
+      ],
+      "safe_answer": "Use for machine milking according to maintenance and hygiene instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P055",
+      "name": "Milking Machine Nano milk 150 BS",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking machine",
+        "portable dairy milking"
+      ],
+      "safe_answer": "Use for machine milking according to maintenance and hygiene instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P056",
+      "name": "Liner for milking machine.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine_liner",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking liner replacement",
+        "teat cup liner",
+        "milking machine maintenance"
+      ],
+      "safe_answer": "Replace at the recommended service interval; worn liners can affect milking performance and teat health.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P057",
+      "name": "Pulsator 60-40.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine_pulsator",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking machine pulsator",
+        "pulsation repair",
+        "milking maintenance"
+      ],
+      "safe_answer": "Use as compatible milking-machine equipment and verify pulsation performance after installation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P058",
+      "name": "Pulsator repair kit.",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine_repair",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "repair pulsator",
+        "milking machine maintenance"
+      ],
+      "safe_answer": "Use only on compatible equipment and verify proper machine operation after repair.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P059",
+      "name": "Vaccum Regulator",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Milking",
+      "role": "milking_machine_vacuum",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "milking vacuum regulation",
+        "milking machine vacuum"
+      ],
+      "safe_answer": "Use to regulate vacuum on compatible equipment. Vacuum settings should be checked using proper service procedures.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P060",
+      "name": "Bovine Foot and Mouth Disease Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "fmd_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "FMD antibody test",
+        "foot and mouth disease testing"
+      ],
+      "safe_answer": "Use only for its stated antibody-testing purpose and according to instructions. Suspected FMD must be reported/managed through veterinary authorities.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P061",
+      "name": "Bovine Brucella Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "brucella_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "brucellosis test",
+        "Brucella antibody test"
+      ],
+      "safe_answer": "Use according to test instructions. Brucellosis has public-health and official-control implications; confirm and manage through veterinary authorities.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P062",
+      "name": "Bovine Brucella Milk Antibody Rapid Test Strip 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "brucella_milk_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "Brucella milk antibody test",
+        "brucellosis milk screening"
+      ],
+      "safe_answer": "Use for its intended milk-antibody screening role. Positive/suspicious results need veterinary confirmation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P063",
+      "name": "Bovine Theileria Ta/To Antibody Rapid Test Kit",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "theileria_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "theileria test",
+        "tick fever test",
+        "Theileria antibody"
+      ],
+      "safe_answer": "Use according to instructions. A sick febrile or anemic cow needs veterinary assessment even if a rapid test is available.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P064",
+      "name": "Bovine Tuberculosis Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "bovine_tb_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "bovine TB test",
+        "tuberculosis screening"
+      ],
+      "safe_answer": "Use only within an appropriate veterinary testing program; bovine TB diagnosis/control should follow official guidance.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P065",
+      "name": "Bovine Anthrax Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "anthrax_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "anthrax test",
+        "anthrax antibody screening"
+      ],
+      "safe_answer": "Use only according to intended test instructions. If anthrax is suspected in a sudden death, do not open the carcass; contact veterinary authorities.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P066",
+      "name": "Bovine Hemorrhagic Septicemia Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "hs_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "hemorrhagic septicemia test",
+        "HS antibody test"
+      ],
+      "safe_answer": "Use according to the stated antibody-test purpose. A rapidly sick animal still needs urgent veterinary care.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P067",
+      "name": "Bovine IBR Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "ibr_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "IBR test",
+        "infectious bovine rhinotracheitis antibody"
+      ],
+      "safe_answer": "Use according to intended antibody-screening instructions and herd veterinary protocol.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P068",
+      "name": "Bovine Leptospira IgG/IgM Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "leptospira_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "leptospirosis test",
+        "Leptospira antibody"
+      ],
+      "safe_answer": "Use according to test instructions. Leptospirosis can affect people; handle urine and reproductive material carefully.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P069",
+      "name": "Bovine Salmonella Antibody Rapid Test Kit 1 Test",
+      "brand": "Chimertech",
+      "category": "Disease Management",
+      "subcategory": "Field Tests",
+      "role": "salmonella_antibody_test",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "Salmonella test",
+        "salmonellosis antibody"
+      ],
+      "safe_answer": "Use according to intended antibody-screening instructions and veterinary interpretation.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P070",
+      "name": "Chaff Cutter Dairy Cutter 1.5",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Fodder",
+      "role": "chaff_cutter",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cut fodder",
+        "chaff cutting",
+        "fodder preparation"
+      ],
+      "safe_answer": "Use for fodder preparation with machine guards and operator safety procedures.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P071",
+      "name": "Chaff Cutter FARM PRO 200",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Fodder",
+      "role": "chaff_cutter",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cut fodder",
+        "chaff cutting",
+        "farm fodder preparation"
+      ],
+      "safe_answer": "Use for fodder preparation according to equipment safety instructions.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P072",
+      "name": "Cream Separator Machine – 100 LPH (0.5 HP)",
+      "brand": "Chimertech",
+      "category": "Herd management",
+      "subcategory": "Milk Processing",
+      "role": "cream_separator",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cream separation",
+        "milk processing",
+        "100 LPH"
+      ],
+      "safe_answer": "Use for milk/cream separation according to cleaning and food-hygiene procedures.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P073",
+      "name": "Cream Separator Machine – 165 LPH (1 HP)",
+      "brand": "Chimertech",
+      "category": "Herd management",
+      "subcategory": "Milk Processing",
+      "role": "cream_separator",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "cream separation",
+        "milk processing",
+        "165 LPH"
+      ],
+      "safe_answer": "Use for higher-capacity milk/cream separation according to cleaning and food-hygiene procedures.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P074",
+      "name": "Cleaning brush set (Lite).",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Hygiene",
+      "role": "farm_cleaning",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "equipment cleaning",
+        "farm hygiene",
+        "milking equipment cleaning"
+      ],
+      "safe_answer": "Use for appropriate equipment/farm cleaning and keep cleaning tools separated by hygiene zone.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    },
+    {
+      "product_id": "P075",
+      "name": "Dip Cup 1 unit",
+      "brand": "Chimertech",
+      "category": "Farm Equipments",
+      "subcategory": "Hygiene",
+      "role": "teat_dip_accessory",
+      "species": [
+        "cattle"
+      ],
+      "use_cases": [
+        "teat dip cup",
+        "pre dip",
+        "post dip"
+      ],
+      "safe_answer": "Use with the appropriate teat-care product. Keep the cup clean and avoid contaminating bulk product.",
+      "source": {
+        "store": "https://chimertech.shop/",
+        "collection": "https://chimertech.shop/collections/all",
+        "verified_listed_on": "2026-10-07"
+      },
+      "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
+      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+    }
+  ],
+  "recommendation_scenarios": [
+    {
+      "scenario_id": "REC-001",
+      "intent": "mastitis_prevention",
+      "farmer_questions": [
+        "How can I prevent mastitis?",
+        "How to stop udder infection?",
+        "What should I use before and after milking?",
+        "Which products help prevent mastitis?",
+        "My farm gets repeated mastitis, what should I change?"
+      ],
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ],
+      "answer_logic": "Explain clean/dry bedding, clean hands/gloves, pre-milking cleaning and drying, correct machine use, and post-milking teat protection. Recommend MooFoam for the pre-milking hygiene step, FineKine for post-milking teat protection, and CMT for periodic screening.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-002",
+      "intent": "mastitis_screening",
+      "farmer_questions": [
+        "How can I detect mastitis early?",
+        "How do I test hidden mastitis?",
+        "My cow milk reduced but udder looks normal, how can I check?",
+        "Which Chimertech mastitis test should I buy?"
+      ],
+      "recommended_product_ids": [
+        "P001",
+        "P003",
+        "P007"
+      ],
+      "answer_logic": "Explain that subclinical mastitis may not be visible. Recommend Quadmastest or CMT for screening; a milking-line mastitis indicator can flag visible irregular milk but should not be used to rule out subclinical mastitis.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-003",
+      "intent": "post_milking_teat_care",
+      "farmer_questions": [
+        "What should I apply after milking?",
+        "Which post dip should I use?",
+        "How can I protect teat after milking?",
+        "FineKine or Iodokine after milking?"
+      ],
+      "recommended_product_ids": [
+        "P008",
+        "P012"
+      ],
+      "answer_logic": "Explain the purpose of post-milking teat hygiene, then present FineKine and Iodokine as current post-milking options. Follow each product's label rather than inventing a universal dose.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-004",
+      "intent": "pre_milking_hygiene",
+      "farmer_questions": [
+        "What should I use before milking?",
+        "How do I clean dirty teats?",
+        "Which product is for pre milking teat wash?"
+      ],
+      "recommended_product_ids": [
+        "P010",
+        "P075"
+      ],
+      "answer_logic": "Recommend MooFoam for pre-milking teat cleaning and a clean dip cup where appropriate; remind the farmer to dry teats before attaching the milking unit.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-005",
+      "intent": "udder_support",
+      "farmer_questions": [
+        "My cow udder is swollen, what Chimertech product can help?",
+        "Which product is for udder inflammation support?",
+        "What can I use along with mastitis management?"
+      ],
+      "recommended_product_ids": [
+        "P014",
+        "P031"
+      ],
+      "answer_logic": "First check for fever, abnormal milk, severe pain and appetite loss. For supportive care, surface Mastoveda and MastoVita, but do not let product advice replace veterinary assessment of clinical mastitis.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-006",
+      "intent": "tick_control",
+      "farmer_questions": [
+        "My cow has many ticks, what product do you have?",
+        "Which Chimertech product is for ticks?",
+        "How can I reduce ticks on cattle?"
+      ],
+      "recommended_product_ids": [
+        "P016",
+        "P017"
+      ],
+      "answer_logic": "Explain integrated tick control and recommend Tic Tick Tic or Tick Talc according to label. If the cow has fever, anemia, dark urine or marked weakness, advise veterinary examination for tick-borne disease.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-007",
+      "intent": "heat_detection",
+      "farmer_questions": [
+        "How do I know my cow is in heat?",
+        "Which product detects estrus?",
+        "I keep missing heat, what can I use?"
+      ],
+      "recommended_product_ids": [
+        "P018"
+      ],
+      "answer_logic": "Explain standing heat and other behavioral signs, then recommend Estrus Gun as a supporting heat-detection tool.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-008",
+      "intent": "pregnancy_testing",
+      "farmer_questions": [
+        "How can I know my cow is pregnant?",
+        "Which pregnancy test do you have?",
+        "Can I test pregnancy on farm?"
+      ],
+      "recommended_product_ids": [
+        "P019",
+        "P020"
+      ],
+      "answer_logic": "Explain that pregnancy testing must be done at the test's validated timing; recommend PregKine and tell the agent to retrieve the current instructions before giving the exact testing window.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-009",
+      "intent": "artificial_insemination",
+      "farmer_questions": [
+        "What equipment do I need for AI?",
+        "Do you have AI gun?",
+        "How do I store and thaw semen?"
+      ],
+      "recommended_product_ids": [
+        "P021",
+        "P022",
+        "P023"
+      ],
+      "answer_logic": "Recommend the digital AI gun, LN2 container and semen thawer for trained breeding personnel. Do not teach invasive AI technique to untrained users as a substitute for professional training.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-010",
+      "intent": "fertility_support",
+      "farmer_questions": [
+        "My cow is not conceiving, which supplement can help?",
+        "Do you have fertility supplement?",
+        "My cow keeps repeating heat, what should I give?"
+      ],
+      "recommended_product_ids": [
+        "P028"
+      ],
+      "answer_logic": "Explain that repeat breeding has many causes. Surface NutraKine Fertility Booster only as nutritional support and recommend reproductive evaluation if the problem persists.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-011",
+      "intent": "pregnancy_or_anestrus_problem",
+      "farmer_questions": [
+        "Cow not coming to heat, what product should I buy?",
+        "My cow has no heat after calving, what can I use?"
+      ],
+      "recommended_product_ids": [
+        "P018",
+        "P028"
+      ],
+      "answer_logic": "Do not jump straight to a product. First distinguish missed heat from anestrus, pregnancy, poor body condition or uterine disease. Estrus Gun can support detection; fertility supplements do not replace reproductive examination.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-012",
+      "intent": "calf_milk_feeding",
+      "farmer_questions": [
+        "How can I feed a calf without enough milk?",
+        "Do you have calf milk replacer?",
+        "Which bottle should I use for calf feeding?"
+      ],
+      "recommended_product_ids": [
+        "P035",
+        "P036",
+        "P037",
+        "P039"
+      ],
+      "answer_logic": "Explain that newborn calves need timely colostrum first. Then surface ServaTac milk replacer and suitable feeding bottle/bucket options for later feeding according to label.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-013",
+      "intent": "calf_nutrition",
+      "farmer_questions": [
+        "Which supplement do you have for calves?",
+        "My calf needs nutrition support, what product is there?"
+      ],
+      "recommended_product_ids": [
+        "P026",
+        "P034"
+      ],
+      "answer_logic": "Surface Calfster and Probos+ as calf-support products according to their labels. If the calf is weak, scouring, feverish or not sucking, recommend diagnosis rather than supplement-only management.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-014",
+      "intent": "mineral_support",
+      "farmer_questions": [
+        "Which mineral mixture do you have for cows?",
+        "My cow eats soil, should I give minerals?",
+        "Which Chimertech cattle mineral is available?"
+      ],
+      "recommended_product_ids": [
+        "P024",
+        "P033"
+      ],
+      "answer_logic": "Recommend Mineral Max or the relevant mineral-support product only as part of a balanced ration. Pica or poor production should not automatically be labeled a mineral deficiency.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-015",
+      "intent": "calcium_transition_support",
+      "farmer_questions": [
+        "What calcium supplement do you have?",
+        "Cow just calved, which calcium product is available?"
+      ],
+      "recommended_product_ids": [
+        "P025"
+      ],
+      "answer_logic": "Surface NutraKine Calcdex as a nutritional calcium-support product. If the cow is weak or unable to stand after calving, make veterinary emergency guidance the primary response.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-016",
+      "intent": "milk_yield_support",
+      "farmer_questions": [
+        "Which product can increase milk?",
+        "My cow milk is low, do you have a milk booster?",
+        "Which supplement is for lactating cow?"
+      ],
+      "recommended_product_ids": [
+        "P032",
+        "P024"
+      ],
+      "answer_logic": "Before recommending a supplement, advise checking feed intake, water, heat stress, mastitis, stage of lactation and illness. Then surface Milk Booster and Mineral Max as nutritional options, not guaranteed cures for low milk.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-017",
+      "intent": "poor_appetite",
+      "farmer_questions": [
+        "My cow is not eating, which tonic should I give?",
+        "Do you have liver tonic for cattle?"
+      ],
+      "recommended_product_ids": [
+        "P030"
+      ],
+      "answer_logic": "Do not treat appetite loss as a simple supplement question. Explain that persistent anorexia may signal disease; surface Liver Tonic only as supportive nutrition after basic health checks.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-018",
+      "intent": "deworming",
+      "farmer_questions": [
+        "Which dewormer do you have?",
+        "How can I control worms in cattle?",
+        "Do you sell cattle dewormer?"
+      ],
+      "recommended_product_ids": [
+        "P027"
+      ],
+      "answer_logic": "Surface NutraKine D-Wormer according to its current label, but encourage a parasite-control plan rather than repeated blind dosing.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-019",
+      "intent": "hoof_care",
+      "farmer_questions": [
+        "My cow hoof is overgrown, what tool do you have?",
+        "Do you sell hoof knife?",
+        "What can I use for hoof trimming?"
+      ],
+      "recommended_product_ids": [
+        "P049"
+      ],
+      "answer_logic": "Recommend the hoof knife only for trained hoof care. Severe lameness, deep lesions or infection need professional evaluation.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-020",
+      "intent": "cow_kicking_milking",
+      "farmer_questions": [
+        "My cow kicks during milking, what can I use?",
+        "Do you have anti kick bar?"
+      ],
+      "recommended_product_ids": [
+        "P040"
+      ],
+      "answer_logic": "Surface the Anti kick bar as a temporary restraint/safety tool, while reminding the farmer to check whether pain, mastitis or poor handling is causing the kicking.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-021",
+      "intent": "cow_floor_comfort",
+      "farmer_questions": [
+        "My cows slip on floor, what product can help?",
+        "Do you have rubber mats for cows?",
+        "How can I improve standing comfort?"
+      ],
+      "recommended_product_ids": [
+        "P041",
+        "P042"
+      ],
+      "answer_logic": "Recommend cow rubber mats as a comfort/flooring option, but keep drainage, cleanliness and hoof health in the management advice.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-022",
+      "intent": "water_access",
+      "farmer_questions": [
+        "How can I give cows automatic water?",
+        "Do you have cow drinking bowls?",
+        "Which water bowl is better for cattle?"
+      ],
+      "recommended_product_ids": [
+        "P043",
+        "P044",
+        "P045"
+      ],
+      "answer_logic": "Surface the available drinking-bowl options and emphasize adequate flow, cleanliness and enough access points for the herd.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-023",
+      "intent": "animal_identification",
+      "farmer_questions": [
+        "How can I identify each cow digitally?",
+        "Do you have RFID ear tags?",
+        "How do I connect cattle ID to software?"
+      ],
+      "recommended_product_ids": [
+        "P046",
+        "P047"
+      ],
+      "answer_logic": "Recommend RFID ear tags plus the RFID reader for digital identification and linkage to herd records.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-024",
+      "intent": "temperature_check",
+      "farmer_questions": [
+        "How do I check cow fever?",
+        "Do you sell veterinary thermometer?",
+        "My calf feels hot, what can I use?"
+      ],
+      "recommended_product_ids": [
+        "P048"
+      ],
+      "answer_logic": "Recommend the digital veterinary thermometer for objective temperature measurement; clinical interpretation should consider age, environment and other signs.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-025",
+      "intent": "milking_machine",
+      "farmer_questions": [
+        "Which milking machine do you sell?",
+        "I want a machine for milking cows, what options are there?"
+      ],
+      "recommended_product_ids": [
+        "P053",
+        "P054",
+        "P055"
+      ],
+      "answer_logic": "Surface the three current milking-machine options and compare capacity/features from live product pages before recommending one.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-026",
+      "intent": "milking_machine_maintenance",
+      "farmer_questions": [
+        "My milking machine is not working properly, what parts do you have?",
+        "Do you sell liner, pulsator or vacuum regulator?"
+      ],
+      "recommended_product_ids": [
+        "P056",
+        "P057",
+        "P058",
+        "P059"
+      ],
+      "answer_logic": "Surface the relevant compatible part. Do not recommend changing vacuum or pulsation blindly; advise proper machine checking after repair.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-027",
+      "intent": "fmd_testing",
+      "farmer_questions": [
+        "Do you have FMD test kit?",
+        "How can I test for foot and mouth disease?"
+      ],
+      "recommended_product_ids": [
+        "P060"
+      ],
+      "answer_logic": "Surface the FMD antibody rapid test only for its stated testing purpose. Suspected clinical FMD requires isolation and veterinary/official reporting rather than relying on a shop test alone.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-028",
+      "intent": "brucellosis_testing",
+      "farmer_questions": [
+        "Do you have Brucella test?",
+        "Can I test cow milk for brucellosis?",
+        "Which Brucella kit is available?"
+      ],
+      "recommended_product_ids": [
+        "P061",
+        "P062"
+      ],
+      "answer_logic": "Surface the appropriate blood/antibody or milk-antibody product, while emphasizing zoonotic risk and veterinary confirmation.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-029",
+      "intent": "theileria_testing",
+      "farmer_questions": [
+        "My cow has tick fever, do you have Theileria test?",
+        "Which test is for theileriosis?"
+      ],
+      "recommended_product_ids": [
+        "P063"
+      ],
+      "answer_logic": "Surface the Theileria rapid test but prioritize veterinary care for fever, anemia, weakness or breathing difficulty.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-030",
+      "intent": "tb_testing",
+      "farmer_questions": [
+        "Do you have bovine TB test?",
+        "How can I screen cattle for TB?"
+      ],
+      "recommended_product_ids": [
+        "P064"
+      ],
+      "answer_logic": "Surface the listed bovine TB antibody test only within an appropriate veterinary testing program; official diagnosis/control rules take priority.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-031",
+      "intent": "anthrax_testing",
+      "farmer_questions": [
+        "Do you have anthrax test for cattle?",
+        "Cow died suddenly, can I use anthrax test?"
+      ],
+      "recommended_product_ids": [
+        "P065"
+      ],
+      "answer_logic": "If sudden death suggests anthrax, the response must first say not to open the carcass and to contact veterinary authorities. Product recommendation is secondary.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-032",
+      "intent": "fodder_cutting",
+      "farmer_questions": [
+        "Which chaff cutter do you have?",
+        "I need machine to cut fodder for cows."
+      ],
+      "recommended_product_ids": [
+        "P070",
+        "P071"
+      ],
+      "answer_logic": "Surface both chaff-cutter options and compare live specifications before recommending based on farm size.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-033",
+      "intent": "cream_separation",
+      "farmer_questions": [
+        "Do you have cream separator?",
+        "Which machine can separate cream from milk?"
+      ],
+      "recommended_product_ids": [
+        "P072",
+        "P073"
+      ],
+      "answer_logic": "Surface both cream-separator capacities and select based on expected litres per hour.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    },
+    {
+      "scenario_id": "REC-034",
+      "intent": "farm_hygiene_tools",
+      "farmer_questions": [
+        "What tools do you have for cleaning dairy equipment?",
+        "Do you sell cleaning brushes?"
+      ],
+      "recommended_product_ids": [
+        "P074"
+      ],
+      "answer_logic": "Recommend the cleaning brush set for appropriate farm/equipment cleaning and explain hygiene-zone separation.",
+      "response_order": [
+        "answer the cattle/farm problem",
+        "give safe action",
+        "recommend relevant product",
+        "add warning if needed"
+      ]
+    }
+  ],
+  "question_index": [
+    {
+      "id": "REC-001-Q01",
+      "question": "How can I prevent mastitis?",
+      "intent": "mastitis_prevention",
+      "scenario_id": "REC-001",
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ]
+    },
+    {
+      "id": "REC-001-Q02",
+      "question": "How to stop udder infection?",
+      "intent": "mastitis_prevention",
+      "scenario_id": "REC-001",
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ]
+    },
+    {
+      "id": "REC-001-Q03",
+      "question": "What should I use before and after milking?",
+      "intent": "mastitis_prevention",
+      "scenario_id": "REC-001",
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ]
+    },
+    {
+      "id": "REC-001-Q04",
+      "question": "Which products help prevent mastitis?",
+      "intent": "mastitis_prevention",
+      "scenario_id": "REC-001",
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ]
+    },
+    {
+      "id": "REC-001-Q05",
+      "question": "My farm gets repeated mastitis, what should I change?",
+      "intent": "mastitis_prevention",
+      "scenario_id": "REC-001",
+      "recommended_product_ids": [
+        "P010",
+        "P008",
+        "P003"
+      ]
+    },
+    {
+      "id": "REC-002-Q01",
+      "question": "How can I detect mastitis early?",
+      "intent": "mastitis_screening",
+      "scenario_id": "REC-002",
+      "recommended_product_ids": [
+        "P001",
+        "P003",
+        "P007"
+      ]
+    },
+    {
+      "id": "REC-002-Q02",
+      "question": "How do I test hidden mastitis?",
+      "intent": "mastitis_screening",
+      "scenario_id": "REC-002",
+      "recommended_product_ids": [
+        "P001",
+        "P003",
+        "P007"
+      ]
+    },
+    {
+      "id": "REC-002-Q03",
+      "question": "My cow milk reduced but udder looks normal, how can I check?",
+      "intent": "mastitis_screening",
+      "scenario_id": "REC-002",
+      "recommended_product_ids": [
+        "P001",
+        "P003",
+        "P007"
+      ]
+    },
+    {
+      "id": "REC-002-Q04",
+      "question": "Which Chimertech mastitis test should I buy?",
+      "intent": "mastitis_screening",
+      "scenario_id": "REC-002",
+      "recommended_product_ids": [
+        "P001",
+        "P003",
+        "P007"
+      ]
+    },
+    {
+      "id": "REC-003-Q01",
+      "question": "What should I apply after milking?",
+      "intent": "post_milking_teat_care",
+      "scenario_id": "REC-003",
+      "recommended_product_ids": [
+        "P008",
+        "P012"
+      ]
+    },
+    {
+      "id": "REC-003-Q02",
+      "question": "Which post dip should I use?",
+      "intent": "post_milking_teat_care",
+      "scenario_id": "REC-003",
+      "recommended_product_ids": [
+        "P008",
+        "P012"
+      ]
+    },
+    {
+      "id": "REC-003-Q03",
+      "question": "How can I protect teat after milking?",
+      "intent": "post_milking_teat_care",
+      "scenario_id": "REC-003",
+      "recommended_product_ids": [
+        "P008",
+        "P012"
+      ]
+    },
+    {
+      "id": "REC-003-Q04",
+      "question": "FineKine or Iodokine after milking?",
+      "intent": "post_milking_teat_care",
+      "scenario_id": "REC-003",
+      "recommended_product_ids": [
+        "P008",
+        "P012"
+      ]
+    },
+    {
+      "id": "REC-004-Q01",
+      "question": "What should I use before milking?",
+      "intent": "pre_milking_hygiene",
+      "scenario_id": "REC-004",
+      "recommended_product_ids": [
+        "P010",
+        "P075"
+      ]
+    },
+    {
+      "id": "REC-004-Q02",
+      "question": "How do I clean dirty teats?",
+      "intent": "pre_milking_hygiene",
+      "scenario_id": "REC-004",
+      "recommended_product_ids": [
+        "P010",
+        "P075"
+      ]
+    },
+    {
+      "id": "REC-004-Q03",
+      "question": "Which product is for pre milking teat wash?",
+      "intent": "pre_milking_hygiene",
+      "scenario_id": "REC-004",
+      "recommended_product_ids": [
+        "P010",
+        "P075"
+      ]
+    },
+    {
+      "id": "REC-005-Q01",
+      "question": "My cow udder is swollen, what Chimertech product can help?",
+      "intent": "udder_support",
+      "scenario_id": "REC-005",
+      "recommended_product_ids": [
+        "P014",
+        "P031"
+      ]
+    },
+    {
+      "id": "REC-005-Q02",
+      "question": "Which product is for udder inflammation support?",
+      "intent": "udder_support",
+      "scenario_id": "REC-005",
+      "recommended_product_ids": [
+        "P014",
+        "P031"
+      ]
+    },
+    {
+      "id": "REC-005-Q03",
+      "question": "What can I use along with mastitis management?",
+      "intent": "udder_support",
+      "scenario_id": "REC-005",
+      "recommended_product_ids": [
+        "P014",
+        "P031"
+      ]
+    },
+    {
+      "id": "REC-006-Q01",
+      "question": "My cow has many ticks, what product do you have?",
+      "intent": "tick_control",
+      "scenario_id": "REC-006",
+      "recommended_product_ids": [
+        "P016",
+        "P017"
+      ]
+    },
+    {
+      "id": "REC-006-Q02",
+      "question": "Which Chimertech product is for ticks?",
+      "intent": "tick_control",
+      "scenario_id": "REC-006",
+      "recommended_product_ids": [
+        "P016",
+        "P017"
+      ]
+    },
+    {
+      "id": "REC-006-Q03",
+      "question": "How can I reduce ticks on cattle?",
+      "intent": "tick_control",
+      "scenario_id": "REC-006",
+      "recommended_product_ids": [
+        "P016",
+        "P017"
+      ]
+    },
+    {
+      "id": "REC-007-Q01",
+      "question": "How do I know my cow is in heat?",
+      "intent": "heat_detection",
+      "scenario_id": "REC-007",
+      "recommended_product_ids": [
+        "P018"
+      ]
+    },
+    {
+      "id": "REC-007-Q02",
+      "question": "Which product detects estrus?",
+      "intent": "heat_detection",
+      "scenario_id": "REC-007",
+      "recommended_product_ids": [
+        "P018"
+      ]
+    },
+    {
+      "id": "REC-007-Q03",
+      "question": "I keep missing heat, what can I use?",
+      "intent": "heat_detection",
+      "scenario_id": "REC-007",
+      "recommended_product_ids": [
+        "P018"
+      ]
+    },
+    {
+      "id": "REC-008-Q01",
+      "question": "How can I know my cow is pregnant?",
+      "intent": "pregnancy_testing",
+      "scenario_id": "REC-008",
+      "recommended_product_ids": [
+        "P019",
+        "P020"
+      ]
+    },
+    {
+      "id": "REC-008-Q02",
+      "question": "Which pregnancy test do you have?",
+      "intent": "pregnancy_testing",
+      "scenario_id": "REC-008",
+      "recommended_product_ids": [
+        "P019",
+        "P020"
+      ]
+    },
+    {
+      "id": "REC-008-Q03",
+      "question": "Can I test pregnancy on farm?",
+      "intent": "pregnancy_testing",
+      "scenario_id": "REC-008",
+      "recommended_product_ids": [
+        "P019",
+        "P020"
+      ]
+    },
+    {
+      "id": "REC-009-Q01",
+      "question": "What equipment do I need for AI?",
+      "intent": "artificial_insemination",
+      "scenario_id": "REC-009",
+      "recommended_product_ids": [
+        "P021",
+        "P022",
+        "P023"
+      ]
+    },
+    {
+      "id": "REC-009-Q02",
+      "question": "Do you have AI gun?",
+      "intent": "artificial_insemination",
+      "scenario_id": "REC-009",
+      "recommended_product_ids": [
+        "P021",
+        "P022",
+        "P023"
+      ]
+    },
+    {
+      "id": "REC-009-Q03",
+      "question": "How do I store and thaw semen?",
+      "intent": "artificial_insemination",
+      "scenario_id": "REC-009",
+      "recommended_product_ids": [
+        "P021",
+        "P022",
+        "P023"
+      ]
+    },
+    {
+      "id": "REC-010-Q01",
+      "question": "My cow is not conceiving, which supplement can help?",
+      "intent": "fertility_support",
+      "scenario_id": "REC-010",
+      "recommended_product_ids": [
+        "P028"
+      ]
+    },
+    {
+      "id": "REC-010-Q02",
+      "question": "Do you have fertility supplement?",
+      "intent": "fertility_support",
+      "scenario_id": "REC-010",
+      "recommended_product_ids": [
+        "P028"
+      ]
+    },
+    {
+      "id": "REC-010-Q03",
+      "question": "My cow keeps repeating heat, what should I give?",
+      "intent": "fertility_support",
+      "scenario_id": "REC-010",
+      "recommended_product_ids": [
+        "P028"
+      ]
+    },
+    {
+      "id": "REC-011-Q01",
+      "question": "Cow not coming to heat, what product should I buy?",
+      "intent": "pregnancy_or_anestrus_problem",
+      "scenario_id": "REC-011",
+      "recommended_product_ids": [
+        "P018",
+        "P028"
+      ]
+    },
+    {
+      "id": "REC-011-Q02",
+      "question": "My cow has no heat after calving, what can I use?",
+      "intent": "pregnancy_or_anestrus_problem",
+      "scenario_id": "REC-011",
+      "recommended_product_ids": [
+        "P018",
+        "P028"
+      ]
+    },
+    {
+      "id": "REC-012-Q01",
+      "question": "How can I feed a calf without enough milk?",
+      "intent": "calf_milk_feeding",
+      "scenario_id": "REC-012",
+      "recommended_product_ids": [
+        "P035",
+        "P036",
+        "P037",
+        "P039"
+      ]
+    },
+    {
+      "id": "REC-012-Q02",
+      "question": "Do you have calf milk replacer?",
+      "intent": "calf_milk_feeding",
+      "scenario_id": "REC-012",
+      "recommended_product_ids": [
+        "P035",
+        "P036",
+        "P037",
+        "P039"
+      ]
+    },
+    {
+      "id": "REC-012-Q03",
+      "question": "Which bottle should I use for calf feeding?",
+      "intent": "calf_milk_feeding",
+      "scenario_id": "REC-012",
+      "recommended_product_ids": [
+        "P035",
+        "P036",
+        "P037",
+        "P039"
+      ]
+    },
+    {
+      "id": "REC-013-Q01",
+      "question": "Which supplement do you have for calves?",
+      "intent": "calf_nutrition",
+      "scenario_id": "REC-013",
+      "recommended_product_ids": [
+        "P026",
+        "P034"
+      ]
+    },
+    {
+      "id": "REC-013-Q02",
+      "question": "My calf needs nutrition support, what product is there?",
+      "intent": "calf_nutrition",
+      "scenario_id": "REC-013",
+      "recommended_product_ids": [
+        "P026",
+        "P034"
+      ]
+    },
+    {
+      "id": "REC-014-Q01",
+      "question": "Which mineral mixture do you have for cows?",
+      "intent": "mineral_support",
+      "scenario_id": "REC-014",
+      "recommended_product_ids": [
+        "P024",
+        "P033"
+      ]
+    },
+    {
+      "id": "REC-014-Q02",
+      "question": "My cow eats soil, should I give minerals?",
+      "intent": "mineral_support",
+      "scenario_id": "REC-014",
+      "recommended_product_ids": [
+        "P024",
+        "P033"
+      ]
+    },
+    {
+      "id": "REC-014-Q03",
+      "question": "Which Chimertech cattle mineral is available?",
+      "intent": "mineral_support",
+      "scenario_id": "REC-014",
+      "recommended_product_ids": [
+        "P024",
+        "P033"
+      ]
+    },
+    {
+      "id": "REC-015-Q01",
+      "question": "What calcium supplement do you have?",
+      "intent": "calcium_transition_support",
+      "scenario_id": "REC-015",
+      "recommended_product_ids": [
+        "P025"
+      ]
+    },
+    {
+      "id": "REC-015-Q02",
+      "question": "Cow just calved, which calcium product is available?",
+      "intent": "calcium_transition_support",
+      "scenario_id": "REC-015",
+      "recommended_product_ids": [
+        "P025"
+      ]
+    },
+    {
+      "id": "REC-016-Q01",
+      "question": "Which product can increase milk?",
+      "intent": "milk_yield_support",
+      "scenario_id": "REC-016",
+      "recommended_product_ids": [
+        "P032",
+        "P024"
+      ]
+    },
+    {
+      "id": "REC-016-Q02",
+      "question": "My cow milk is low, do you have a milk booster?",
+      "intent": "milk_yield_support",
+      "scenario_id": "REC-016",
+      "recommended_product_ids": [
+        "P032",
+        "P024"
+      ]
+    },
+    {
+      "id": "REC-016-Q03",
+      "question": "Which supplement is for lactating cow?",
+      "intent": "milk_yield_support",
+      "scenario_id": "REC-016",
+      "recommended_product_ids": [
+        "P032",
+        "P024"
+      ]
+    },
+    {
+      "id": "REC-017-Q01",
+      "question": "My cow is not eating, which tonic should I give?",
+      "intent": "poor_appetite",
+      "scenario_id": "REC-017",
+      "recommended_product_ids": [
+        "P030"
+      ]
+    },
+    {
+      "id": "REC-017-Q02",
+      "question": "Do you have liver tonic for cattle?",
+      "intent": "poor_appetite",
+      "scenario_id": "REC-017",
+      "recommended_product_ids": [
+        "P030"
+      ]
+    },
+    {
+      "id": "REC-018-Q01",
+      "question": "Which dewormer do you have?",
+      "intent": "deworming",
+      "scenario_id": "REC-018",
+      "recommended_product_ids": [
+        "P027"
+      ]
+    },
+    {
+      "id": "REC-018-Q02",
+      "question": "How can I control worms in cattle?",
+      "intent": "deworming",
+      "scenario_id": "REC-018",
+      "recommended_product_ids": [
+        "P027"
+      ]
+    },
+    {
+      "id": "REC-018-Q03",
+      "question": "Do you sell cattle dewormer?",
+      "intent": "deworming",
+      "scenario_id": "REC-018",
+      "recommended_product_ids": [
+        "P027"
+      ]
+    },
+    {
+      "id": "REC-019-Q01",
+      "question": "My cow hoof is overgrown, what tool do you have?",
+      "intent": "hoof_care",
+      "scenario_id": "REC-019",
+      "recommended_product_ids": [
+        "P049"
+      ]
+    },
+    {
+      "id": "REC-019-Q02",
+      "question": "Do you sell hoof knife?",
+      "intent": "hoof_care",
+      "scenario_id": "REC-019",
+      "recommended_product_ids": [
+        "P049"
+      ]
+    },
+    {
+      "id": "REC-019-Q03",
+      "question": "What can I use for hoof trimming?",
+      "intent": "hoof_care",
+      "scenario_id": "REC-019",
+      "recommended_product_ids": [
+        "P049"
+      ]
+    },
+    {
+      "id": "REC-020-Q01",
+      "question": "My cow kicks during milking, what can I use?",
+      "intent": "cow_kicking_milking",
+      "scenario_id": "REC-020",
+      "recommended_product_ids": [
+        "P040"
+      ]
+    },
+    {
+      "id": "REC-020-Q02",
+      "question": "Do you have anti kick bar?",
+      "intent": "cow_kicking_milking",
+      "scenario_id": "REC-020",
+      "recommended_product_ids": [
+        "P040"
+      ]
+    },
+    {
+      "id": "REC-021-Q01",
+      "question": "My cows slip on floor, what product can help?",
+      "intent": "cow_floor_comfort",
+      "scenario_id": "REC-021",
+      "recommended_product_ids": [
+        "P041",
+        "P042"
+      ]
+    },
+    {
+      "id": "REC-021-Q02",
+      "question": "Do you have rubber mats for cows?",
+      "intent": "cow_floor_comfort",
+      "scenario_id": "REC-021",
+      "recommended_product_ids": [
+        "P041",
+        "P042"
+      ]
+    },
+    {
+      "id": "REC-021-Q03",
+      "question": "How can I improve standing comfort?",
+      "intent": "cow_floor_comfort",
+      "scenario_id": "REC-021",
+      "recommended_product_ids": [
+        "P041",
+        "P042"
+      ]
+    },
+    {
+      "id": "REC-022-Q01",
+      "question": "How can I give cows automatic water?",
+      "intent": "water_access",
+      "scenario_id": "REC-022",
+      "recommended_product_ids": [
+        "P043",
+        "P044",
+        "P045"
+      ]
+    },
+    {
+      "id": "REC-022-Q02",
+      "question": "Do you have cow drinking bowls?",
+      "intent": "water_access",
+      "scenario_id": "REC-022",
+      "recommended_product_ids": [
+        "P043",
+        "P044",
+        "P045"
+      ]
+    },
+    {
+      "id": "REC-022-Q03",
+      "question": "Which water bowl is better for cattle?",
+      "intent": "water_access",
+      "scenario_id": "REC-022",
+      "recommended_product_ids": [
+        "P043",
+        "P044",
+        "P045"
+      ]
+    },
+    {
+      "id": "REC-023-Q01",
+      "question": "How can I identify each cow digitally?",
+      "intent": "animal_identification",
+      "scenario_id": "REC-023",
+      "recommended_product_ids": [
+        "P046",
+        "P047"
+      ]
+    },
+    {
+      "id": "REC-023-Q02",
+      "question": "Do you have RFID ear tags?",
+      "intent": "animal_identification",
+      "scenario_id": "REC-023",
+      "recommended_product_ids": [
+        "P046",
+        "P047"
+      ]
+    },
+    {
+      "id": "REC-023-Q03",
+      "question": "How do I connect cattle ID to software?",
+      "intent": "animal_identification",
+      "scenario_id": "REC-023",
+      "recommended_product_ids": [
+        "P046",
+        "P047"
+      ]
+    },
+    {
+      "id": "REC-024-Q01",
+      "question": "How do I check cow fever?",
+      "intent": "temperature_check",
+      "scenario_id": "REC-024",
+      "recommended_product_ids": [
+        "P048"
+      ]
+    },
+    {
+      "id": "REC-024-Q02",
+      "question": "Do you sell veterinary thermometer?",
+      "intent": "temperature_check",
+      "scenario_id": "REC-024",
+      "recommended_product_ids": [
+        "P048"
+      ]
+    },
+    {
+      "id": "REC-024-Q03",
+      "question": "My calf feels hot, what can I use?",
+      "intent": "temperature_check",
+      "scenario_id": "REC-024",
+      "recommended_product_ids": [
+        "P048"
+      ]
+    },
+    {
+      "id": "REC-025-Q01",
+      "question": "Which milking machine do you sell?",
+      "intent": "milking_machine",
+      "scenario_id": "REC-025",
+      "recommended_product_ids": [
+        "P053",
+        "P054",
+        "P055"
+      ]
+    },
+    {
+      "id": "REC-025-Q02",
+      "question": "I want a machine for milking cows, what options are there?",
+      "intent": "milking_machine",
+      "scenario_id": "REC-025",
+      "recommended_product_ids": [
+        "P053",
+        "P054",
+        "P055"
+      ]
+    },
+    {
+      "id": "REC-026-Q01",
+      "question": "My milking machine is not working properly, what parts do you have?",
+      "intent": "milking_machine_maintenance",
+      "scenario_id": "REC-026",
+      "recommended_product_ids": [
+        "P056",
+        "P057",
+        "P058",
+        "P059"
+      ]
+    },
+    {
+      "id": "REC-026-Q02",
+      "question": "Do you sell liner, pulsator or vacuum regulator?",
+      "intent": "milking_machine_maintenance",
+      "scenario_id": "REC-026",
+      "recommended_product_ids": [
+        "P056",
+        "P057",
+        "P058",
+        "P059"
+      ]
+    },
+    {
+      "id": "REC-027-Q01",
+      "question": "Do you have FMD test kit?",
+      "intent": "fmd_testing",
+      "scenario_id": "REC-027",
+      "recommended_product_ids": [
+        "P060"
+      ]
+    },
+    {
+      "id": "REC-027-Q02",
+      "question": "How can I test for foot and mouth disease?",
+      "intent": "fmd_testing",
+      "scenario_id": "REC-027",
+      "recommended_product_ids": [
+        "P060"
+      ]
+    },
+    {
+      "id": "REC-028-Q01",
+      "question": "Do you have Brucella test?",
+      "intent": "brucellosis_testing",
+      "scenario_id": "REC-028",
+      "recommended_product_ids": [
+        "P061",
+        "P062"
+      ]
+    },
+    {
+      "id": "REC-028-Q02",
+      "question": "Can I test cow milk for brucellosis?",
+      "intent": "brucellosis_testing",
+      "scenario_id": "REC-028",
+      "recommended_product_ids": [
+        "P061",
+        "P062"
+      ]
+    },
+    {
+      "id": "REC-028-Q03",
+      "question": "Which Brucella kit is available?",
+      "intent": "brucellosis_testing",
+      "scenario_id": "REC-028",
+      "recommended_product_ids": [
+        "P061",
+        "P062"
+      ]
+    },
+    {
+      "id": "REC-029-Q01",
+      "question": "My cow has tick fever, do you have Theileria test?",
+      "intent": "theileria_testing",
+      "scenario_id": "REC-029",
+      "recommended_product_ids": [
+        "P063"
+      ]
+    },
+    {
+      "id": "REC-029-Q02",
+      "question": "Which test is for theileriosis?",
+      "intent": "theileria_testing",
+      "scenario_id": "REC-029",
+      "recommended_product_ids": [
+        "P063"
+      ]
+    },
+    {
+      "id": "REC-030-Q01",
+      "question": "Do you have bovine TB test?",
+      "intent": "tb_testing",
+      "scenario_id": "REC-030",
+      "recommended_product_ids": [
+        "P064"
+      ]
+    },
+    {
+      "id": "REC-030-Q02",
+      "question": "How can I screen cattle for TB?",
+      "intent": "tb_testing",
+      "scenario_id": "REC-030",
+      "recommended_product_ids": [
+        "P064"
+      ]
+    },
+    {
+      "id": "REC-031-Q01",
+      "question": "Do you have anthrax test for cattle?",
+      "intent": "anthrax_testing",
+      "scenario_id": "REC-031",
+      "recommended_product_ids": [
+        "P065"
+      ]
+    },
+    {
+      "id": "REC-031-Q02",
+      "question": "Cow died suddenly, can I use anthrax test?",
+      "intent": "anthrax_testing",
+      "scenario_id": "REC-031",
+      "recommended_product_ids": [
+        "P065"
+      ]
+    },
+    {
+      "id": "REC-032-Q01",
+      "question": "Which chaff cutter do you have?",
+      "intent": "fodder_cutting",
+      "scenario_id": "REC-032",
+      "recommended_product_ids": [
+        "P070",
+        "P071"
+      ]
+    },
+    {
+      "id": "REC-032-Q02",
+      "question": "I need machine to cut fodder for cows.",
+      "intent": "fodder_cutting",
+      "scenario_id": "REC-032",
+      "recommended_product_ids": [
+        "P070",
+        "P071"
+      ]
+    },
+    {
+      "id": "REC-033-Q01",
+      "question": "Do you have cream separator?",
+      "intent": "cream_separation",
+      "scenario_id": "REC-033",
+      "recommended_product_ids": [
+        "P072",
+        "P073"
+      ]
+    },
+    {
+      "id": "REC-033-Q02",
+      "question": "Which machine can separate cream from milk?",
+      "intent": "cream_separation",
+      "scenario_id": "REC-033",
+      "recommended_product_ids": [
+        "P072",
+        "P073"
+      ]
+    },
+    {
+      "id": "REC-034-Q01",
+      "question": "What tools do you have for cleaning dairy equipment?",
+      "intent": "farm_hygiene_tools",
+      "scenario_id": "REC-034",
+      "recommended_product_ids": [
+        "P074"
+      ]
+    },
+    {
+      "id": "REC-034-Q02",
+      "question": "Do you sell cleaning brushes?",
+      "intent": "farm_hygiene_tools",
+      "scenario_id": "REC-034",
+      "recommended_product_ids": [
+        "P074"
+      ]
+    }
+  ]
+}

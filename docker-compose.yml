@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 1. FastAPI Audio & Farm AI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ragul_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LLM_PROVIDER=ollama
+      - LLM_API_BASE=http://ollama:11434/v1
+      - LLM_MODEL_NAME=qwen2.5:3b
+      - DATABASE_URL=sqlite+aiosqlite:///./ragul_farm.db
+    volumes:
+      - farm_db_data:/app
+    depends_on:
+      - ollama
+
+  # 2. React + 3D Holographic Frontend (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ragul_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # 3. Ollama Local Neural LLM Engine (100% Offline & Lifetime Free)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ragul_ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+volumes:
+  farm_db_data:
+  ollama_models:
