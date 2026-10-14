@@ -1,139 +1,247 @@
-# 🐮 RAGUL - Voice-First Self-Hosted Dairy AI Assistant
+# 🐮 RAGUL - Voice-First Multilingual AI Dairy Farm Supervisor
 
-> **RAGUL**: Real-time Agro Guidance & Utilitarian Livestock Assistant
-> Fully self-hosted, 100% open-weight stack without OpenAI APIs or external subscriptions.
-> Native support for **Tanglish** (Tamil + English code-mixing), **Tamil**, **Hindi**, **Hinglish**, and **English**.
-
----
-
-## 🏛️ Architecture
-
-```
-USER VOICE
-    │
-    ▼ (Microphone: navigator.mediaDevices.getUserMedia() / 16kHz PCM)
-SILERO VAD (Voice Activity Detection & Interruption Trigger)
-    │
-    ▼ (Real-time Speech Chunk Stream)
-FASTER-WHISPER (Multilingual STT - Preserves Tanglish/Tamil/Hindi)
-    │
-    ▼ (Unfiltered Mixed-Language Transcript)
-RAGUL BACKEND (FastAPI + WebSocket Server)
-    │
-    ▼ (Sliding Window Session Memory + Pronoun Resolver)
-SELF-HOSTED LLM (vLLM / llama.cpp - Qwen2.5-7B / Llama-3-8B)
-    │
-    ▼ (Dynamic Tool Calling: get_cow_health_summary, mastitis_risk, etc.)
-FASTAPI FARM TOOLS ──► PostgreSQL / SQLite Database (Cattle, Milk, Feed, Health)
-    │
-    ▼ (Natural Synthesized Response)
-SELF-HOSTED TTS (AI4Bharat Indic-TTS / Kokoro / Browser-Native)
-    │
-    ▼ (Audio Stream / WebSocket)
-FARMER HEARS ANSWER (Jarvis-style instant interruption support)
-```
+> **RAGUL**: Real-time Agro Guidance & Utilitarian Livestock Assistant  
+> Intelligent voice assistant powered by **JarvisLabs Cloud LLM** inference and **Supabase Cloud PostgreSQL** telemetry.  
+> Native multilingual support for **Tanglish** (Tamil + English code-mixing), **Tamil**, **Hindi**, **Hinglish**, and **English**.
 
 ---
 
-## 🚀 Key Features
+## 🏛️ System Architecture
 
-1. **Zero OpenAI Dependencies**: Built on open-source, open-weight tools (`faster-whisper`, `silero-vad`, `vLLM` / `llama.cpp`, `AI4Bharat Indic-TTS`).
-2. **Jarvis-Style Interruption**: When RAGUL is speaking and the farmer starts talking, Silero VAD detects speech instantly and halts audio playback immediately.
-3. **Multilingual Code-Mixing (Tanglish / Hinglish / Tamil / Hindi)**: Preserves farmer expressions like *"Ragul cow 37 ku milk yen kammiya iruku?"* without forcing machine translation.
-4. **Lightweight Custom Tool Router**: No heavy frameworks (LangChain / CrewAI / AutoGen). Direct, predictable tool execution against the farm database.
-5. **Contextual Memory & Anti-Repetition**: Resolves pronouns like *"What should I do now?"* or *"Why did her yield drop?"* by linking to recent entity context (e.g. Cow 37).
-6. **Live Cattle Telemetry Dashboard**: Real-time monitoring of somatic cell counts, mastitis quarters, estrus heat detection cycles, and feed ration deficits.
+```
+                    ┌─────────────────────────┐
+                    │  FARMER / USER VOICE    │
+                    │  (Microphone / WebMic)  │
+                    └───────────┬─────────────┘
+                                │ 16kHz PCM Audio Stream
+                                ▼
+         ┌─────────────────────────────────────────────────┐
+         │       SILERO VAD (Voice Activity Detection)     │
+         │       Instant Interruption Detection Trigger    │
+         └──────────────────────┬──────────────────────────┘
+                                │ Active Speech Chunks
+                                ▼
+         ┌─────────────────────────────────────────────────┐
+         │            FASTER-WHISPER (STT Engine)          │
+         │   Tanglish / Tamil / Hindi / English Transcriber│
+         └──────────────────────┬──────────────────────────┘
+                                │ Text Transcript
+                                ▼
+         ┌─────────────────────────────────────────────────┐
+         │           FASTAPI + WEBSOCKET SERVER            │
+         │    Sliding Window Session Memory & Pronouns     │
+         └───────┬───────────────────────────────┬─────────┘
+                 │                               │
+                 ▼                               ▼
+  ┌──────────────────────────────┐ ┌──────────────────────────────┐
+  │      JARVISLABS CLOUD LLM    │ │       SUPABASE CLOUD DB      │
+  │  (GLM-5.3-Flash / vLLM / OSS)│ │   (PostgreSQL Async Engine)  │
+  │  Autonomous Tool Calling &   │ │   Cattle Records, Milk Yield,│
+  │  Farm Decision Reasoning     │ │   Mastitis, Worker Shifts    │
+  └──────────────┬───────────────┘ └──────────────┬───────────────┘
+                 │                                │
+                 └───────────────┬────────────────┘
+                                 │
+                                 ▼
+         ┌─────────────────────────────────────────────────┐
+         │       RAG ENGINE (Veterinary QA & Catalog)      │
+         └──────────────────────┬──────────────────────────┘
+                                │ Synthesized Text & Tool Result
+                                ▼
+         ┌─────────────────────────────────────────────────┐
+         │             TTS & 3D AVATAR INTERFACE           │
+         │  Browser-Native Speech Synthesis & Hologram     │
+         └─────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Key Highlights & Capabilities
+
+1. **JarvisLabs High-Performance Cloud LLM**:
+   - Ultra-low latency inference powered by **JarvisLabs** (`https://models.jarvislabs.net/v1`).
+   - Supports models such as `glm-5.3-flash`, `gpt-oss-120b`, and open-source models with OpenAI-compatible API endpoints.
+   - Flexible fallback to local Ollama or vLLM instances for offline operation.
+
+2. **Supabase Cloud PostgreSQL Integration**:
+   - Real-time cloud database hosting production cattle records, milk production logs, health events, and worker schedules.
+   - Automated tool calls query live database records to answer questions like:
+     - *"Which cattle gave the highest milk yield today?"*
+     - *"எந்த மாட்டிற்கு மடிநோய் அறிகுறி உள்ளது?"* (Which cow shows symptoms of mastitis?)
+     - *"Inniku morning ethanai workers check in pannanga?"* (How many workers checked in this morning?)
+
+3. **Multilingual Code-Mixing (Tanglish & Hinglish)**:
+   - Understands natural mixed speech without requiring translation layers (e.g., *"Cow 37 ku milk yen kammiya iruku?"*).
+
+4. **Zero-Lag Voice Interruption (Silero VAD)**:
+   - When RAGUL is speaking, speaking into the microphone immediately triggers Silero VAD to halt audio playback and attend to the user.
+
+5. **3D Avatar & Farm Telemetry Dashboard**:
+   - React 18 + Vite dashboard with 3D talking avatar, live audio orb visualizer, quick query chips, and real-time herd metrics.
 
 ---
 
 ## 📦 Project Structure
 
 ```
-d:/Ragul Ai/
+Ragul Ai/
+├── .gitignore                      # Git exclusion rules
+├── docker-compose.yml              # Multi-container orchestration (Backend + Frontend + Ollama)
+├── README.md                       # Documentation
+│
 ├── backend/
+│   ├── Dockerfile                  # Container build for backend
+│   ├── .dockerignore
+│   ├── .env                        # Local credentials (JarvisLabs & Supabase)
+│   ├── .env.example                # Configuration template
+│   ├── requirements.txt            # Python dependencies
+│   ├── run_server.py               # Uvicorn server launcher
+│   ├── test_agent.py               # Multilingual CLI test suite
 │   ├── app/
 │   │   ├── audio/
-│   │   │   ├── vad.py            # Silero VAD speech detection & interruption logic
-│   │   │   ├── stt.py            # faster-whisper multilingual transcriber
-│   │   │   └── tts.py            # AI4Bharat / Kokoro TTS adapter
+│   │   │   ├── vad.py              # Silero VAD speech detection & interruption
+│   │   │   ├── stt.py              # faster-whisper multilingual transcriber
+│   │   │   └── tts.py              # Text-to-speech adapter
 │   │   ├── database/
-│   │   │   ├── db.py             # Async SQLAlchemy engine
-│   │   │   ├── models.py         # Cattle, MilkReading, HealthEvent, FeedRecord, Session models
-│   │   │   └── seed_data.py      # Seed data (Cow 37 mastitis case, Cow 14 heat cycle, etc.)
+│   │   │   ├── db.py               # Async SQLAlchemy engine
+│   │   │   ├── models.py           # Cattle, MilkReading, HealthEvent, Worker, Feed models
+│   │   │   ├── supabase_client.py  # Supabase cloud client
+│   │   │   └── seed_data.py        # Seed script for initial records
+│   │   ├── knowledge/
+│   │   │   └── rag_engine.py       # RAG retriever for catalog & veterinary QA
 │   │   ├── llm/
-│   │   │   ├── client.py         # Universal vLLM / llama.cpp / local reasoning client
-│   │   │   ├── prompts.py        # Domain-tuned dairy prompts & entity resolution
-│   │   │   └── router.py         # Lightweight custom tool router
+│   │   │   ├── client.py           # JarvisLabs & OpenAI-compatible client
+│   │   │   ├── prompts.py          # Domain-tuned dairy supervisor prompts
+│   │   │   └── router.py           # Dynamic tool calling & message routing
 │   │   ├── memory/
-│   │   │   └── session_manager.py # Sliding window memory & conversation sessions
+│   │   │   └── session_manager.py  # Conversation history & sliding context
 │   │   ├── tools/
-│   │   │   └── farm_tools.py     # Farm DB tools (health summary, mastitis, milk trends, estrus)
-│   │   ├── config.py             # Environment configurations
-│   │   └── main.py               # FastAPI app with REST and WebSocket endpoints
-│   ├── requirements.txt
-│   └── run_server.py             # Backend launcher
+│   │   │   └── farm_tools.py       # Database query tools (milk yield, health, workers)
+│   │   ├── config.py               # Pydantic settings
+│   │   └── main.py                 # FastAPI application & WebSocket server
+│   ├── data/knowledge_base/
+│   │   ├── products_catalog.json   # Dairy medicine & nutritional products
+│   │   └── veterinary_qa.json      # Clinical veterinary diagnosis knowledge
+│   └── supabase/
+│       ├── 01_schema.sql           # Database schema definition
+│       └── 02_seed_september_2026.sql # Sample farm dataset
 │
 └── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   ├── Header.tsx            # Brand header & telemetry indicator
-    │   │   ├── VoiceSphere.tsx       # Glowing Jarvis orb with live waveform visualizer
-    │   │   ├── ConversationFeed.tsx  # Chat stream & live tool call visualizer
-    │   │   ├── FarmTelemetryPanel.tsx # Live herd statistics, Cow 37 & Cow 14 alerts
-    │   │   └── QuickQueryBar.tsx     # One-click farmer query chips
-    │   ├── services/
-    │   │   └── audioEngine.ts        # Browser-native AudioContext + WebSocket streamer
-    │   ├── store/
-    │   │   └── useRagulStore.ts      # Zustand state store
-    │   ├── App.tsx
-    │   ├── index.css                 # Glassmorphism & dark aesthetic stylesheet
-    │   └── main.tsx
+    ├── Dockerfile                  # Nginx production container
+    ├── .dockerignore
+    ├── nginx.conf                  # Reverse proxy configuration
+    ├── index.html
     ├── package.json
-    └── vite.config.ts
+    ├── tsconfig.json
+    ├── vite.config.ts
+    ├── public/                     # Avatar graphics and icons
+    └── src/
+        ├── components/
+        │   ├── Header.tsx              # System status & metrics
+        │   ├── VoiceSphere.tsx         # Holographic glowing audio orb
+        │   ├── TalkingRagul3D.tsx      # 3D interactive avatar
+        │   ├── RagulAvatar.tsx         # Dynamic facial expression avatar
+        │   ├── ConversationFeed.tsx    # Live dialogue stream
+        │   ├── FarmTelemetryPanel.tsx  # Live herd stats & alerts
+        │   └── QuickQueryBar.tsx       # Pre-configured farmer query chips
+        ├── services/
+        │   └── audioEngine.ts          # Web Audio API & WebSocket client
+        ├── store/
+        │   └── useRagulStore.ts        # Zustand UI & session state
+        ├── App.tsx
+        ├── index.css                   # Glassmorphism styling
+        └── main.tsx
+```
+
+---
+
+## ⚙️ Environment Configuration
+
+Create or update your `backend/.env` using the provided [`.env.example`](backend/.env.example):
+
+```env
+# ==========================================
+# LLM Provider - JarvisLabs Cloud
+# ==========================================
+LLM_PROVIDER=jarvislabs
+JARVISLABS_API_KEY=your_jarvislabs_api_key_here
+LLM_API_BASE=https://models.jarvislabs.net/v1
+LLM_MODEL_NAME=glm-5.3-flash
+LLM_TEMPERATURE=0.2
+
+# ==========================================
+# Supabase Cloud PostgreSQL Database
+# ==========================================
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your_supabase_anon_or_service_role_key
+DATABASE_URL=postgresql+asyncpg://postgres:your_password@db.your-project-id.supabase.co:5432/postgres
+
+# ==========================================
+# Audio Speech-to-Text & VAD
+# ==========================================
+WHISPER_MODEL_SIZE=tiny
+WHISPER_DEVICE=cpu
+WHISPER_COMPUTE_TYPE=int8
+VAD_SAMPLE_RATE=16000
+VAD_THRESHOLD=0.5
+TTS_ENGINE=browser_native
+DEFAULT_LANGUAGE=en-US
 ```
 
 ---
 
 ## 🛠️ Quick Start
 
-### 1. Start the Backend
+### 1. Run the Backend
 
 ```bash
 cd backend
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the FastAPI server
 python run_server.py
 ```
-*Backend will be running on `http://localhost:8000` with Swagger docs at `http://localhost:8000/docs`.*
+- API server will start at: `http://localhost:8000`
+- Interactive Swagger docs: `http://localhost:8000/docs`
 
-### 2. Start the Frontend
+### 2. Run the Frontend
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start Vite development server
 npm run dev
 ```
-*Frontend will be running on `http://localhost:5173`.*
+- Web dashboard will be available at: `http://localhost:5173`
+
+### 3. Run Multilingual CLI Test Suite
+
+To verify JarvisLabs and Supabase query responses across Tamil, Tanglish, Hindi, and English:
+
+```bash
+cd backend
+python test_agent.py
+```
 
 ---
 
-## 🔌 Connecting to Local LLM Engines
+## 🐳 Running with Docker (Optional)
 
-In `backend/app/config.py` (or via `.env`):
+To start the entire stack (FastAPI Backend, Nginx Frontend, and optional Ollama service) in containerized mode:
 
-- **vLLM**:
-  ```env
-  LLM_PROVIDER=vllm
-  LLM_API_BASE=http://localhost:8000/v1
-  LLM_MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
-  ```
-- **llama.cpp**:
-  ```env
-  LLM_PROVIDER=llamacpp
-  LLM_API_BASE=http://localhost:8080/v1
-  ```
-- **Ollama**:
-  ```env
-  LLM_PROVIDER=ollama
-  LLM_API_BASE=http://localhost:11434/v1
-  LLM_MODEL_NAME=qwen2.5:7b
-  ```
+```bash
+docker-compose up --build
+```
+- Web Dashboard: `http://localhost`
+- API Backend: `http://localhost:8000`
+
+---
+
+## 📄 License
+
+Proprietary & Developed for Dairy Herd Management.
