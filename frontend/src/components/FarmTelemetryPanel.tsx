@@ -1,95 +1,138 @@
-import React, { useEffect } from 'react';
-import { AlertTriangle, Flame, Droplets, CheckSquare, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Flame, Droplets, Camera, Video, Sparkles, Building2, Eye } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
 export const FarmTelemetryPanel: React.FC = () => {
-  const { farmOverview, setFarmOverview } = useRagulStore();
+  const { farmOverview, setFarmOverview, currentUser } = useRagulStore();
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchFarmOverview = async () => {
       try {
-        const res = await fetch('/api/farm/overview');
+        const farmParam = currentUser?.farm_id ? `?farm_id=${currentUser.farm_id}` : '';
+        const res = await fetch(`/api/farm/overview${farmParam}`);
         if (res.ok) {
           const data = await res.json();
           setFarmOverview(data);
+        }
+
+        const actRes = await fetch(`/api/farm/activities${farmParam ? `${farmParam}&limit=6` : '?limit=6'}`);
+        if (actRes.ok) {
+          const actData = await actRes.json();
+          setRecentActivities(actData);
         }
       } catch (e) {
         console.error('Failed to fetch farm overview:', e);
       }
     };
+
     fetchFarmOverview();
-    const interval = setInterval(fetchFarmOverview, 10000);
+    const interval = setInterval(fetchFarmOverview, 8000);
     return () => clearInterval(interval);
-  }, [setFarmOverview]);
+  }, [currentUser?.farm_id, setFarmOverview]);
 
   return (
     <aside className="sidebar-panel">
+      {/* Farm Identity Header */}
+      <div className="glass-card farm-identity-card">
+        <div className="farm-id-row">
+          <div className="farm-icon-box">
+            <Building2 size={20} className="text-cyan-400" />
+          </div>
+          <div>
+            <div className="farm-card-name">{farmOverview?.farm_name || currentUser?.farm_name || 'PashuX Dairy Farm'}</div>
+            <div className="farm-card-code">
+              Code: <strong>{farmOverview?.farm_code || currentUser?.farm_code || 'FARM_B01F3C'}</strong>
+              {currentUser?.owner_name && ` • Owner: ${currentUser.owner_name}`}
+            </div>
+          </div>
+          <span className="live-status-pill">LIVE AI</span>
+        </div>
+      </div>
+
       {/* Overview Stat Card */}
       <div className="glass-card">
         <div className="card-title">
-          <span>Herd Telemetry</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 500 }}>Live Feed</span>
+          <span>Vision Telemetry</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 500 }}>
+            {farmOverview?.cameras_connected ? `${farmOverview.cameras_connected} Cam Connected` : 'CAM01 Vision Stream'}
+          </span>
         </div>
         <div className="stat-grid">
           <div className="stat-box">
-            <div className="stat-label">Total Cattle</div>
-            <div className="stat-value cyan">{farmOverview?.total_cows || 50}</div>
+            <div className="stat-label">Monitored Cattle</div>
+            <div className="stat-value cyan">{farmOverview?.monitored_cattle_count || 3}</div>
           </div>
           <div className="stat-box">
-            <div className="stat-label">Daily Yield</div>
-            <div className="stat-value success">{farmOverview?.total_daily_yield_litres || 720.5}L</div>
+            <div className="stat-label">AI Detections</div>
+            <div className="stat-value success">{farmOverview?.total_activities_detected || 11}</div>
           </div>
           <div className="stat-box">
-            <div className="stat-label">Mastitis Risk</div>
-            <div className="stat-value danger">{farmOverview?.high_risk_mastitis || 1} Cow</div>
+            <div className="stat-label">Estrus (Heat)</div>
+            <div className="stat-value warning">{farmOverview?.active_estrus_count || 5} Events</div>
           </div>
           <div className="stat-box">
-            <div className="stat-label">In Estrus / Heat</div>
-            <div className="stat-value warning">{farmOverview?.in_estrus_cows || 1} Cow</div>
+            <div className="stat-label">Feeding Logs</div>
+            <div className="stat-value purple">{farmOverview?.feeding_activity_count || 1} Manger</div>
           </div>
         </div>
       </div>
 
-      {/* Health Alerts Card */}
-      <div className="glass-card" style={{ flex: 1 }}>
+      {/* Estrus & Heat Alerts Card */}
+      <div className="glass-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div className="card-title">
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <AlertTriangle size={16} color="var(--accent-rose)" /> Priority Health Alerts
+            <Flame size={16} color="var(--accent-amber)" /> Live Estrus (Heat) Alerts
           </span>
+          <span className="badge-heat-live">Active</span>
         </div>
 
-        {/* Cow 37 Mastitis Highlight */}
-        <div className="cow-alert-card">
-          <div className="cow-alert-header">
-            <span>Cow #37 (Kamadhenu)</span>
-            <span className="badge-risk">Mastitis High Risk</span>
+        {farmOverview?.active_estrus_alerts && farmOverview.active_estrus_alerts.length > 0 ? (
+          <div className="estrus-alerts-scroll">
+            {farmOverview.active_estrus_alerts.slice(0, 3).map((alert, idx) => (
+              <div key={idx} className="cow-alert-card estrus-card">
+                <div className="cow-alert-header">
+                  <span className="cow-id-tag">🐮 {alert.cattle_id}</span>
+                  <span className="badge-confidence">{alert.confidence} AI Match</span>
+                </div>
+                <div className="cow-alert-desc">
+                  {alert.description}
+                </div>
+                <div className="alert-meta-footer">
+                  <span>📹 {alert.camera}</span>
+                  <span>⏰ {alert.time}</span>
+                  <span className="breeding-tag">AI Window Active</span>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="cow-alert-desc">
-            Milk yield down <strong>16%</strong> (13.2L vs 15.8L). Somatic cells elevated in <strong>Left Rear Quarter</strong>. Feed deficit: 2.6kg.
+        ) : (
+          <div className="no-alert-box">
+            No active heat mounting signs detected right now. Herd behavior is calm.
           </div>
-        </div>
+        )}
 
-        {/* Cow 14 Estrus Highlight */}
-        <div className="cow-alert-card" style={{ background: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)' }}>
-          <div className="cow-alert-header">
-            <span>Cow #14 (Lakshmi)</span>
-            <span className="badge-estrus">Active Heat (AI Window)</span>
-          </div>
-          <div className="cow-alert-desc">
-            Pedometer activity at 320%. Optimal AI breeding window is between <strong>4:00 PM - 7:00 PM today</strong>.
-          </div>
-        </div>
-
-        {/* Farm Tasks */}
+        {/* Live Camera Activity Feed */}
         <div style={{ marginTop: '16px' }}>
-          <div className="stat-label" style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <CheckSquare size={13} /> Active Clinical Tasks
+          <div className="card-title" style={{ marginBottom: '8px', fontSize: '0.82rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Camera size={14} /> CAM01 Camera Vision Feed
+            </span>
           </div>
-          {farmOverview?.urgent_tasks?.map((task) => (
-            <div key={task.id} style={{ fontSize: '0.78rem', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', marginBottom: '6px', borderLeft: '3px solid var(--accent-cyan)' }}>
-              {task.title}
-            </div>
-          ))}
+          <div className="activity-feed-mini">
+            {recentActivities.map((act) => (
+              <div key={act.activity_id} className="activity-item-card">
+                <div className="activity-item-top">
+                  <span className="act-type-tag">
+                    {act.activity_type === 'estrus_detected' ? '🔥 Estrus' : '🌾 Feeding'}
+                  </span>
+                  <span className="act-cow">{act.cattle_id || 'Herd'}</span>
+                  <span className="act-conf">{Math.round((act.confidence_score || 0.8) * 100)}%</span>
+                </div>
+                <div className="act-desc">{act.description}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </aside>

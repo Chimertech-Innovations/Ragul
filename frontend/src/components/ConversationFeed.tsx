@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { User, Copy, Check, Sparkles, Volume2 } from 'lucide-react';
-import { useRagulStore } from '../store/useRagulStore';
+import { User, Copy, Check, Sparkles, Volume2, Camera, Eye, X, Maximize2, ShieldCheck } from 'lucide-react';
+import { useRagulStore, ProofImageItem } from '../store/useRagulStore';
 
 // Clean text and render formatted elements nicely without raw HTML tags or markdown noise
 const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => {
@@ -12,7 +12,6 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
 
   // 2. Check if content contains markdown table
   const lines = clean.split('\n');
-  const tableLines: string[] = [];
   const textBlocks: (string | { type: 'table'; header: string[]; rows: string[][] })[] = [];
 
   let inTable = false;
@@ -25,7 +24,6 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
     if (line.startsWith('|') && line.endsWith('|')) {
       const cells = line.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
       
-      // Is separator row |---|---|
       const isSeparator = cells.every(c => /^[-:\s]+$/.test(c));
 
       if (!inTable) {
@@ -88,9 +86,10 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
                 });
 
                 if (isBullet) {
+                  const startsWithEmoji = /^[\u{1F300}-\u{1FAD6}\u{2000}-\u{27BF}\u{FE00}-\u{FE0F}]/u.test(cleanLine);
                   return (
                     <div key={lIdx} className="clean-bullet-item">
-                      <span className="bullet-dot">▸</span>
+                      {!startsWithEmoji && <span className="bullet-dot">▸</span>}
                       <span className="bullet-text">{renderedLine}</span>
                     </div>
                   );
@@ -156,6 +155,7 @@ export const ConversationFeed: React.FC = () => {
   const { messages, isProcessing, isSpeaking } = useRagulStore();
   const feedEndRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeProofModal, setActiveProofModal] = useState<ProofImageItem | null>(null);
 
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -171,6 +171,13 @@ export const ConversationFeed: React.FC = () => {
     <div className="conversation-feed">
       {messages.map((msg, index) => {
         const isLatestRagul = msg.role === 'assistant' && index === messages.length - 1;
+        
+        // Extract proof images from message or tool metadata
+        const proofImages: ProofImageItem[] = 
+          (msg.proof_images && msg.proof_images.length > 0)
+            ? msg.proof_images
+            : (msg.tool_meta?.proof_images || msg.tool_meta?.result?.proof_images || []);
+
         return (
           <div key={msg.id} className={`message-card ${msg.role} ${isLatestRagul && isSpeaking ? 'is-speaking-active' : ''}`}>
             <div className="message-header">
@@ -178,37 +185,32 @@ export const ConversationFeed: React.FC = () => {
                 {msg.role === 'user' ? (
                   <div className="chat-avatar-user"><User size={13} /></div>
                 ) : (
-                  <img src="/ragul_transparent.png" alt="Ragul" className="chat-avatar-ragul" />
+                  <div className="ragul-avatar-container">
+                    <img src="/ragul_transparent.png" alt="Ragul" className="chat-avatar-ragul" />
+                    {isLatestRagul && isSpeaking && <span className="speaking-status-dot" />}
+                  </div>
                 )}
                 <span className="role-tag">{msg.role === 'user' ? 'Sir' : 'RAGUL AI'}</span>
-                {msg.role === 'assistant' && (
-                  <span className="ai-smart-chip">
-                    <Sparkles size={11} />
-                    <span>Dairy Intelligence</span>
+                {isLatestRagul && isSpeaking && (
+                  <span className="speaking-badge-compact">
+                    <Volume2 size={11} className="pulse-icon" />
+                    <span>Speaking</span>
                   </span>
                 )}
               </div>
               <div className="message-actions">
-                {isLatestRagul && isSpeaking && (
-                  <span className="speaking-badge">
-                    <Volume2 size={12} className="pulse-icon" />
-                    <span>Speaking</span>
-                  </span>
-                )}
                 <span className="timestamp-tag">{msg.timestamp}</span>
                 
-                {/* Direct WhatsApp Share Button for every assistant message */}
                 {msg.role === 'assistant' && (
                   <button
                     onClick={() => {
-                      const text = encodeURIComponent(`🐄 *Green Valley Farm Update:*\n${msg.content}\n\n🤖 _Sent from RAGUL AI_`);
+                      const text = encodeURIComponent(`🐄 *PashuX Farm Update:*\n${msg.content}\n\n🤖 _Sent from RAGUL AI_`);
                       window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
                     }}
-                    className="wa-share-btn"
+                    className="wa-icon-action-btn"
                     title="Share directly to WhatsApp"
                   >
-                    <span className="wa-icon">📲</span>
-                    <span className="wa-text">WhatsApp</span>
+                    <span>📲</span>
                   </button>
                 )}
 
@@ -224,6 +226,65 @@ export const ConversationFeed: React.FC = () => {
 
             <div className="message-body">
               <FormattedMessageContent content={msg.content} />
+
+              {/* CCTV DETECTION PROOF GALLERY */}
+              {proofImages.length > 0 && (
+                <div className="cctv-proof-gallery-box">
+                  <div className="cctv-proof-header">
+                    <div className="cctv-proof-title">
+                      <Camera size={14} className="text-cyan-400" />
+                      <span>CCTV Detection Photo Proof ({proofImages.length})</span>
+                    </div>
+                    <span className="cctv-verified-badge">
+                      <ShieldCheck size={12} /> AI Verified
+                    </span>
+                  </div>
+
+                  <div className="cctv-proof-grid">
+                    {proofImages.map((proof, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className="cctv-proof-card"
+                        onClick={() => setActiveProofModal(proof)}
+                        title="Click to zoom CCTV snapshot"
+                      >
+                        <div className="cctv-image-wrapper">
+                          <img
+                            src={proof.image_url}
+                            alt={proof.description || 'CCTV Capture'}
+                            className="cctv-proof-thumb"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Fallback placeholder if image load fails
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="cctv-zoom-overlay">
+                            <Maximize2 size={16} />
+                            <span>View Proof</span>
+                          </div>
+                          <span className="cctv-cam-tag">{proof.camera_id || 'CAM01'}</span>
+                        </div>
+
+                        <div className="cctv-card-meta">
+                          <div className="cctv-meta-row">
+                            <span className="cctv-cow-badge">🐮 {proof.cattle_id || 'Herd'}</span>
+                            {proof.confidence && (
+                              <span className="cctv-conf-badge">{proof.confidence}</span>
+                            )}
+                          </div>
+                          {proof.time && (
+                            <div className="cctv-time-label">⏰ Captured at {proof.time}</div>
+                          )}
+                          {proof.description && (
+                            <div className="cctv-desc-snippet">{proof.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Special WhatsApp URL Action Card if tool was invoked */}
               {msg.tool_meta?.whatsapp_url && (
@@ -264,6 +325,46 @@ export const ConversationFeed: React.FC = () => {
       )}
 
       <div ref={feedEndRef} />
+
+      {/* FULL RESOLUTION PROOF LIGHTBOX MODAL */}
+      {activeProofModal && (
+        <div className="proof-lightbox-overlay" onClick={() => setActiveProofModal(null)}>
+          <div className="proof-lightbox-dialog" onClick={(e) => e.stopPropagation()}>
+            <button className="proof-close-btn" onClick={() => setActiveProofModal(null)}>
+              <X size={20} />
+            </button>
+
+            <div className="proof-lightbox-header">
+              <div className="proof-header-info">
+                <span className="proof-title-tag">📸 CCTV Vision Capture Proof</span>
+                <h3>{activeProofModal.cattle_id || 'Cattle'} • {activeProofModal.camera_id || 'CAM01'}</h3>
+              </div>
+              {activeProofModal.confidence && (
+                <span className="proof-modal-confidence">
+                  AI Confidence: {activeProofModal.confidence}
+                </span>
+              )}
+            </div>
+
+            <div className="proof-modal-image-container">
+              <img
+                src={activeProofModal.image_url}
+                alt={activeProofModal.description || 'CCTV Proof Full'}
+                className="proof-modal-full-img"
+              />
+            </div>
+
+            <div className="proof-modal-footer">
+              <div className="proof-footer-desc">
+                <strong>Detection Summary:</strong> {activeProofModal.description}
+              </div>
+              {activeProofModal.time && (
+                <div className="proof-footer-time">Recorded Time: {activeProofModal.time}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

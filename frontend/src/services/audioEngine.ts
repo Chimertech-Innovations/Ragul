@@ -196,21 +196,31 @@ export class AudioController {
 
           console.log('[AudioController] Accumulating speech:', this.accumulatedSpeech);
 
-          // Clear previous timer and set fast silence debounce (1.6s natural pause)
+          // Clear previous timer and set natural pause silence debounce (1.7s)
           if (this.speechDebounceTimer) {
             clearTimeout(this.speechDebounceTimer);
           }
 
-          // Wait 0.9s of silence after user finishes speaking before dispatching
+          // Wait 1.7s of natural pause silence before finalizing and dispatching
           this.speechDebounceTimer = setTimeout(() => {
             const finalQuery = this.accumulatedSpeech.trim();
             this.accumulatedSpeech = '';
             
             if (finalQuery && finalQuery.length > 1) {
               const now = Date.now();
+              // Prevent firing if this exact query or a subset was dispatched in the last 2.5s
+              if (
+                this.lastSentTranscript &&
+                (this.lastSentTranscript === finalQuery || this.lastSentTranscript.includes(finalQuery)) &&
+                now - this.lastTranscriptTime < 2500
+              ) {
+                console.log('[AudioController] Suppressing duplicate speech dispatch:', finalQuery);
+                return;
+              }
+
               this.lastSentTranscript = finalQuery;
               this.lastTranscriptTime = now;
-              console.log('[AudioController] Fast Silence Trigger (1.6s). Dispatching Query:', finalQuery);
+              console.log('[AudioController] Speech Silence Trigger (1.7s). Dispatching Query:', finalQuery);
               
               if (this.onSilenceEndCallback) {
                 this.onSilenceEndCallback();
@@ -219,7 +229,7 @@ export class AudioController {
                 this.onTranscriptCallback(finalQuery, 'en');
               }
             }
-          }, 900);
+          }, 1700);
         };
 
 
@@ -376,11 +386,11 @@ export class AudioController {
         }
         const rms = Math.sqrt(sumSq / inputData.length);
 
-        // Persistent High Ambient Noise Detector
-        if (rms > 0.20 && !this.isSynthesizing) {
+        // Persistent High Ambient Noise Detector (calibrated for high noise)
+        if (rms > 0.45 && !this.isSynthesizing) {
           this.highNoiseCounter++;
           const now = Date.now();
-          if (this.highNoiseCounter > 15 && now - this.lastNoiseAlertTime > 8000) {
+          if (this.highNoiseCounter > 30 && now - this.lastNoiseAlertTime > 15000) {
             this.lastNoiseAlertTime = now;
             this.highNoiseCounter = 0;
             console.warn('[AudioController] High ambient noise detected');

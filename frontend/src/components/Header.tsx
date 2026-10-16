@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, MessageSquare, Radio, Sparkles } from 'lucide-react';
+import { Sun, Moon, MessageSquare, Radio, Sparkles, User, LogOut, KeyRound } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
 interface HeaderProps {
@@ -7,15 +7,25 @@ interface HeaderProps {
   onToggleTheme: () => void;
   isSideChatOpen: boolean;
   onToggleSideChat: () => void;
+  onOpenLogin: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   theme,
   onToggleTheme,
   isSideChatOpen,
-  onToggleSideChat
+  onToggleSideChat,
+  onOpenLogin
 }) => {
-  const { messages, isListening, isSpeaking } = useRagulStore();
+  const { messages, isListening, isSpeaking, currentUser, setCurrentUser, addMessage } = useRagulStore();
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    addMessage({
+      role: 'assistant',
+      content: 'You have logged out from your farm. Please sign in again with your phone number and password to access your farm telemetry.'
+    });
+  };
 
   return (
     <header className="header header-minimal">
@@ -28,11 +38,32 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="brand-title">
             <span>RAGUL AI</span>
           </div>
-          <div className="brand-subtitle">Smart Multilingual Dairy Assistant</div>
+          <div className="brand-subtitle">PashuX Smart Vision Assistant</div>
         </div>
       </div>
 
       <div className="header-status-strip">
+        {currentUser ? (
+          <div className="user-logged-badge" title={`Farm: ${currentUser.farm_name} (${currentUser.farm_code})`}>
+            <span className="user-icon-dot" />
+            <User size={13} className="text-cyan-400" />
+            <span className="user-name-text">{currentUser.full_name}</span>
+            <span className="farm-code-tag">{currentUser.farm_code}</span>
+            <button
+              onClick={handleLogout}
+              className="logout-mini-btn"
+              title="Logout from this farm"
+            >
+              <LogOut size={12} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={onOpenLogin} className="login-header-btn">
+            <KeyRound size={13} />
+            <span>Farm Login</span>
+          </button>
+        )}
+
         {isListening && (
           <div className="status-chip hearing-chip">
             <Radio size={12} className="animate-spin text-rose-400" />

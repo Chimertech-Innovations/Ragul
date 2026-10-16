@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 import numpy as np
@@ -43,18 +44,10 @@ class FasterWhisperSTT:
         finally:
             self._model_loading = False
 
-    async def transcribe(self, audio_bytes: bytes, language: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Transcribes PCM16 audio bytes with confidence, no-speech probability, and multilingual language detection.
-        """
-        if len(audio_bytes) < 1600: # Less than 0.1s
-            return {"text": "", "language": "auto", "confidence": 0.0, "quality": "noise", "duration": 0}
-
-        # Lazy-load model on first real transcription
+    def _transcribe_sync(self, audio_bytes: bytes, language: Optional[str] = None) -> Dict[str, Any]:
+        """Synchronous CPU worker run inside thread pool."""
         self._load_model_if_needed()
-
         try:
-            # Convert raw PCM16 bytes directly to Float32 numpy array
             audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
 
             if self.model is not None:
@@ -62,9 +55,9 @@ class FasterWhisperSTT:
                     audio_np,
                     beam_size=3,
                     best_of=3,
-                    language=language, # None enables automatic language detection (Tamil, Hindi, English, etc.)
+                    language=language,
                     task="transcribe",
-                    vad_filter=False, # Silero VAD already segments speech cleanly
+                    vad_filter=False,
                     condition_on_previous_text=False,
                     initial_prompt="Hello Ragul, vanakkam, namaste, dairy farm AI, cattle, cow, milk yield, mastitis, feed, staff."
                 )
@@ -75,14 +68,10 @@ class FasterWhisperSTT:
 
                 text = " ".join([seg.text.strip() for seg in segments]).strip()
                 
-                # Calculate aggregate confidence and no_speech probability
                 avg_logprob = float(np.mean([seg.avg_logprob for seg in segments]))
                 no_speech_prob = float(np.mean([seg.no_speech_prob for seg in segments]))
-                
-                # Convert logprob (-inf to 0) to a normalized 0.0 - 1.0 confidence score
                 confidence = float(np.clip(np.exp(avg_logprob), 0.0, 1.0)) * (1.0 - no_speech_prob)
 
-                # Quality determination
                 is_low_quality = (no_speech_prob > 0.65) or (avg_logprob < -1.4) or (confidence < 0.35) or (len(text) < 2)
                 quality = "low_confidence" if is_low_quality else "good"
 
@@ -102,6 +91,15 @@ class FasterWhisperSTT:
             logger.error(f"[STT] Error during multilingual faster-whisper transcription: {e}")
 
         return {"text": "", "language": "auto", "confidence": 0.0, "quality": "error", "duration": 0}
+
+    async def transcribe(self, audio_bytes: bytes, language: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Transcribes PCM16 audio bytes asynchronously in a thread pool to avoid blocking the event loop.
+        """
+        if len(audio_bytes) < 1600:
+            return {"text": "", "language": "auto", "confidence": 0.0, "quality": "noise", "duration": 0}
+
+        return await asyncio.to_thread(self._transcribe_sync, audio_bytes, language)
 
     async def transcribe_audio_bytes(self, audio_bytes: bytes, language: Optional[str] = None) -> Dict[str, Any]:
         """Alias for WebSocket compatibility."""

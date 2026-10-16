@@ -121,7 +121,6 @@ export const TalkingRagul3D: React.FC<TalkingRagul3DProps> = ({ onToggleMic, onS
     { label: '🥛 Daily Milk Status', query: 'What is today milk yield and highest cow?' },
     { label: '🩺 Mastitis & Health', query: 'Is there any cow with mastitis risk or sick?' },
     { label: '🌾 Feed Timing', query: 'What time is the evening feeding and milking?' },
-    { label: '🇮🇳 இன்று பண்ணை நிலவரம்', query: 'இன்று பண்ணைக்கு எத்தனை பணியாளர்கள் வந்தார்கள்?' }
   ];
 
   return (

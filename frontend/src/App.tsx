@@ -7,6 +7,8 @@ import { useRagulStore } from './store/useRagulStore';
 import { audioController } from './services/audioEngine';
 import { Send, Mic, MicOff, X, MessageSquare, Activity, Sparkles } from 'lucide-react';
 
+import { LoginModal } from './components/LoginModal';
+
 export const App: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -18,6 +20,9 @@ export const App: React.FC = () => {
   const {
     sessionId,
     setSessionId,
+    currentUser,
+    isLoginModalOpen,
+    setLoginModalOpen,
     isListening,
     setListening,
     isSpeaking,
@@ -35,6 +40,16 @@ export const App: React.FC = () => {
     localStorage.setItem('ragul_theme', theme);
   }, [theme]);
 
+  // Prompt login if no user logged in yet
+  useEffect(() => {
+    if (!currentUser) {
+      const timer = setTimeout(() => {
+        setLoginModalOpen(true);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser, setLoginModalOpen]);
+
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -49,16 +64,22 @@ export const App: React.FC = () => {
     if (!textToSend) setInputValue('');
     setProcessing(true);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: messageText,
           language: 'auto',
-          session_id: sessionId
+          session_id: sessionId,
+          farm_id: currentUser?.farm_id || null
         })
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -70,13 +91,20 @@ export const App: React.FC = () => {
         addMessage({
           role: 'assistant',
           content: data.response,
-          tool_meta: data.tool_meta
+          tool_meta: data.tool_meta,
+          proof_images: data.proof_images || data.tool_meta?.proof_images || []
         });
 
-        // Trigger Talking Animation & TTS Audio
+        // Trigger Talking Animation & TTS Audio (strip markdown markers for natural voice)
+        const cleanSpoken = data.response
+          .replace(/\*\*/g, '')
+          .replace(/[•▸\-]/g, '')
+          .replace(/📸\s*\*.*?\*/g, '')
+          .trim();
+
         setSpeaking(true);
-        audioController.speakText(data.response, 'en-US');
-        const estimatedDurationMs = Math.max(3000, data.response.length * 65);
+        audioController.speakText(cleanSpoken, 'en-US');
+        const estimatedDurationMs = Math.max(3000, cleanSpoken.length * 65);
         setTimeout(() => setSpeaking(false), estimatedDurationMs);
       } else {
         setProcessing(false);
@@ -85,12 +113,16 @@ export const App: React.FC = () => {
           content: 'Error communicating with farm backend. Please check server status.'
         });
       }
-    } catch (e) {
+    } catch (e: any) {
+      clearTimeout(timeoutId);
       setProcessing(false);
       console.error('Chat error:', e);
+      const isTimeout = e?.name === 'AbortError';
       addMessage({
         role: 'assistant',
-        content: 'Backend offline. Please ensure the FastAPI server is active on port 8000.'
+        content: isTimeout
+          ? 'Sir, response took longer than expected (>25 seconds). The AI model or farm database is taking longer to respond. Please try again or ask your question directly.'
+          : 'Backend offline. Please ensure the FastAPI server is active on port 8000.'
       });
     }
   };
@@ -109,7 +141,12 @@ export const App: React.FC = () => {
       },
       onAssistantResponse: (text, toolMeta) => {
         setProcessing(false);
-        addMessage({ role: 'assistant', content: text, tool_meta: toolMeta });
+        addMessage({
+          role: 'assistant',
+          content: text,
+          tool_meta: toolMeta,
+          proof_images: toolMeta?.proof_images || []
+        });
       },
       onSilenceEnd: () => {
         console.log('[App] User silent. Turning mic off and querying backend...');
@@ -125,10 +162,8 @@ export const App: React.FC = () => {
         });
       },
       onNoiseAlert: (msg) => {
-        addMessage({
-          role: 'system',
-          content: `⚠️ ${msg}`
-        });
+        // Log to console rather than polluting user's chat feed
+        console.warn(`[App] Ambient audio notice: ${msg}`);
       },
       onClapWake: () => {
         if (!audioController.isSynthesizing) {
@@ -169,6 +204,13 @@ export const App: React.FC = () => {
         onToggleTheme={toggleTheme}
         isSideChatOpen={isSideChatOpen}
         onToggleSideChat={() => setIsSideChatOpen(!isSideChatOpen)}
+        onOpenLogin={() => setLoginModalOpen(true)}
+      />
+
+      {/* Login Modal for Farm Phone & Password Auth */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
       />
 
       {/* Main Workspace Layout */}

@@ -14,15 +14,23 @@ class LLMClient:
         self._async_openai_client: Optional[AsyncOpenAI] = None
 
     def _get_openai_client(self) -> AsyncOpenAI:
-        api_key = (
-            settings.JARVISLABS_API_KEY 
-            or settings.OPENAI_API_KEY 
-            or os.environ.get("JARVISLABS_API_KEY", "") 
-            or os.environ.get("OPENAI_API_KEY", "")
-            or "sk-jarvislabs-placeholder"
-        )
-        base_url = settings.LLM_API_BASE.rstrip("/")
-        return AsyncOpenAI(base_url=base_url, api_key=api_key)
+        if self._async_openai_client is None:
+            api_key = (
+                settings.JARVISLABS_API_KEY 
+                or settings.OPENAI_API_KEY 
+                or os.environ.get("JARVISLABS_API_KEY", "") 
+                or os.environ.get("OPENAI_API_KEY", "")
+                or "sk-jarvislabs-placeholder"
+            )
+            base_url = settings.LLM_API_BASE.rstrip("/")
+            # 15-second timeout to allow remote JarvisLabs / OpenAI inference to complete comfortably
+            self._async_openai_client = AsyncOpenAI(
+                base_url=base_url, 
+                api_key=api_key,
+                timeout=httpx.Timeout(15.0, connect=5.0),
+                max_retries=1
+            )
+        return self._async_openai_client
 
     async def chat(
         self,
@@ -139,37 +147,38 @@ class LLMClient:
             except Exception as e:
                 logger.warning(f"[LLMClient] JarvisLabs API call failed: {e}. Falling back to direct HTTP or local fallback...")
 
-        # Mode B: Direct HTTP Fallback (Ollama / Local HTTP)
-        try:
-            is_ollama = "11434" in api_base or provider == "ollama"
-            base_clean = api_base.replace("/v1", "").rstrip("/")
-            target_url = f"{base_clean}/api/chat" if is_ollama else f"{api_base}/chat/completions"
+        # Mode B: Direct HTTP Fallback ONLY for Local Ollama / localhost
+        is_ollama = "11434" in api_base or provider == "ollama" or "localhost" in api_base or "127.0.0.1" in api_base
+        if is_ollama:
+            try:
+                base_clean = api_base.replace("/v1", "").rstrip("/")
+                target_url = f"{base_clean}/api/chat" if "11434" in api_base else f"{api_base}/chat/completions"
 
-            payload: Dict[str, Any] = {
-                "model": model_name,
-                "messages": messages,
-                "stream": False,
-                "options": {
-                    "num_ctx": 1024,
-                    "num_predict": max_tokens,
-                    "temperature": temperature
+                payload: Dict[str, Any] = {
+                    "model": model_name,
+                    "messages": messages,
+                    "stream": False,
+                    "options": {
+                        "num_ctx": 1024,
+                        "num_predict": max_tokens,
+                        "temperature": temperature
+                    }
                 }
-            }
-            if tools:
-                payload["tools"] = tools
+                if tools:
+                    payload["tools"] = tools
 
-            async with httpx.AsyncClient(timeout=8.0) as http_client:
-                response = await http_client.post(target_url, json=payload)
-                if response.status_code == 200:
-                    data = response.json()
-                    msg = data.get("message") or (data.get("choices", [{}])[0].get("message", {}))
-                    raw_content = msg.get("content") or ""
-                    clean_content = re.sub(r'<think>[\s\S]*?</think>', '', raw_content).strip()
-                    msg["content"] = clean_content
-                    return msg, msg.get("tool_calls")
+                async with httpx.AsyncClient(timeout=3.5) as http_client:
+                    response = await http_client.post(target_url, json=payload)
+                    if response.status_code == 200:
+                        data = response.json()
+                        msg = data.get("message") or (data.get("choices", [{}])[0].get("message", {}))
+                        raw_content = msg.get("content") or ""
+                        clean_content = re.sub(r'<think>[\s\S]*?</think>', '', raw_content).strip()
+                        msg["content"] = clean_content
+                        return msg, msg.get("tool_calls")
 
-        except Exception as e2:
-            logger.error(f"[LLMClient] Fallback HTTP call failed: {e2}")
+            except Exception as e2:
+                logger.error(f"[LLMClient] Local Ollama fallback HTTP call failed: {e2}")
 
         err_msg = "LLM service temporarily offline. Using direct database telemetry."
         return {"role": "assistant", "content": err_msg}, None
