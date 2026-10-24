@@ -41,9 +41,19 @@ class VeterinaryRAGEngine:
 
     def _calculate_match_score(self, query: str, target_texts: List[str], keywords: List[str]) -> float:
         """Computes a semantic relevance score between user query and knowledge base record."""
-        q_words = set(re.findall(r'\w+', query.lower()))
+        normalized_q = query.lower()
+        normalized_q = re.sub(r'\b(diasese|desease|diseas|deseas)\b', 'disease', normalized_q)
+        normalized_q = re.sub(r'\bhowto\b', 'how to', normalized_q)
+
+        q_words = set(re.findall(r'\w+', normalized_q))
         if not q_words:
             return 0.0
+
+        # Expand domain acronyms for rich recall
+        if "fmd" in q_words:
+            q_words.update(["foot", "mouth", "disease"])
+        if "cmt" in q_words:
+            q_words.update(["mastitis", "california", "test"])
 
         score = 0.0
         
@@ -52,11 +62,15 @@ class VeterinaryRAGEngine:
         kw_matches = q_words.intersection(kw_set)
         score += len(kw_matches) * 3.0
 
+        # 1.5. Primary Disease Boost: If query explicitly mentions the disease acronym or name
+        PRIMARY_DISEASES = {"fmd", "mastitis", "bloat", "theileriosis", "brucella", "scour", "hypocalcemia", "lumpy"}
+        if q_words.intersection(PRIMARY_DISEASES).intersection(kw_set):
+            score += 6.0
+
         # 2. Phrase matching against question variants
-        lower_q = query.lower()
         for t in target_texts:
             lt = t.lower()
-            if lt in lower_q or lower_q in lt:
+            if lt in normalized_q or normalized_q in lt:
                 score += 5.0
             # Token overlap
             t_words = set(re.findall(r'\w+', lt))
@@ -86,6 +100,15 @@ class VeterinaryRAGEngine:
             targets = [item.get("question", ""), item.get("topic", "")] + item.get("question_variants", [])
             kws = item.get("keywords", [])
             score = self._calculate_match_score(cleaned_query, targets, kws)
+            lower_cq = cleaned_query.lower()
+            intent = item.get("intent", "")
+            if any(w in lower_cq for w in ["check", "inspect", "sign", "symptom", "identify", "look for", "notice"]) and intent == "signs":
+                score += 15.0
+            elif any(w in lower_cq for w in ["prevent", "prevention", "protect", "avoid", "stop"]) and intent == "prevention":
+                score += 15.0
+            elif any(w in lower_cq for w in ["do", "action", "step", "first step", "treatment", "manage", "suspect"]) and intent == "what_to_do":
+                score += 15.0
+
             if score > best_vet_score:
                 best_vet_score = score
                 best_vet = item
@@ -102,12 +125,14 @@ class VeterinaryRAGEngine:
                 best_scenario = sc
 
         # If no clinical or product match exceeds confidence threshold
-        if best_vet_score < 2.0 and best_scenario_score < 2.0:
+        if best_vet_score < 5.0 and best_scenario_score < 5.0:
             return None
 
         # Build combined response
         matched_products = []
-        if best_scenario:
+        is_mastitis_relevant = any(w in cleaned_query.lower() for w in ["mastitis", "udder", "teat", "swollen", "cmt", "milk clot", "subclinical", "மடிநோய்", "quadmastest"])
+        
+        if is_mastitis_relevant and best_scenario:
             matched_products = best_scenario.get("recommended_products", [])
             if not matched_products and "recommended_product_ids" in best_scenario:
                 p_ids = set(best_scenario["recommended_product_ids"])
@@ -118,43 +143,136 @@ class VeterinaryRAGEngine:
 
         # Clinical synthesis
         topic = best_vet.get("topic", "Cattle Health") if best_vet else (best_scenario.get("primary_disease", "Cattle Health") if best_scenario else "Cattle Health")
+        topic_id = best_vet.get("topic_id", "") if best_vet else ""
         answer_friendly = best_vet.get("answer_farmer_friendly", "") if best_vet else (best_scenario.get("clinical_explanation", "") if best_scenario else "")
         action = best_vet.get("immediate_action", "") if best_vet else (best_scenario.get("action_steps", "") if best_scenario else "")
         prevention = best_vet.get("prevention", "") if best_vet else ""
-        
-        # Build Voice-Ready Spoken Answer
-        spoken_parts = []
-        
-        # 1. Clinical Analysis
-        if any(w in cleaned_query.lower() for w in ["what is mastitis", "meaning of mastitis", "explain mastitis", "so what is mastitis"]):
-            spoken_parts.append("Sir, Mastitis is an inflammation and infection of the mammary gland and udder tissue, primarily caused by bacterial invasion (such as Staphylococcus or Streptococcus) entering through the teat canal.")
-        elif "swollen" in cleaned_query.lower() or "mastitis" in cleaned_query.lower():
-            spoken_parts.append("Sir, a swollen udder is a strong indication of Mastitis (udder inflammation caused by bacterial infection entering through the teat canal).")
-        elif "bloat" in cleaned_query.lower() or "gas" in cleaned_query.lower() or "belly" in cleaned_query.lower():
-            spoken_parts.append("Sir, abnormal gas accumulation on the left side of the abdomen indicates Bloat in the rumen.")
-        elif "calving" in cleaned_query.lower() or "down" in cleaned_query.lower() or "cannot stand" in cleaned_query.lower():
-            spoken_parts.append("Sir, a cow unable to stand after calving indicates potential Milk Fever (acute hypocalcemia).")
-        elif "heat" in cleaned_query.lower() or "estrus" in cleaned_query.lower() or "mount" in cleaned_query.lower():
-            spoken_parts.append("Sir, standing to be mounted and clear mucus discharge indicate active Estrus (standing heat).")
-        elif "tick" in cleaned_query.lower():
-            spoken_parts.append("Sir, tick infestation on cattle causes severe anemia and can transmit deadly Theileriosis tick fever.")
-        elif answer_friendly:
-            spoken_parts.append(f"Sir, regarding {topic}: {answer_friendly}")
 
-        # 2. Immediate Action & Prevention
+        # Retrieve comprehensive prevention tips for this disease if not in current record
+        if not prevention and topic_id:
+            for item in self.vet_qa_data:
+                if item.get("topic_id") == topic_id and item.get("intent") == "prevention":
+                    prevention = item.get("prevention") or item.get("answer_farmer_friendly", "")
+                    break
+
+        # Standardize structured prevention checklist for the specific disease
+        prevention_tips: List[str] = []
+        lower_topic = (topic + " " + topic_id + " " + cleaned_query).lower()
+
+        if any(w in lower_topic for w in ["mastitis", "udder", "teat", "மடிநோய்"]):
+            prevention_tips = [
+                "Follow a consistent clean milking routine (strip, pre-dip, wipe dry)",
+                "Keep corral bedding clean, dry, and regularly limed to stop bacteria",
+                "Practice proper post-milking teat barrier dip immediately after clusters detach",
+                "Monitor cows regularly with quarter-wise cow-side screening tests"
+            ]
+        elif any(w in lower_topic for w in ["bloat", "tympanites", "rumen gas"]):
+            prevention_tips = [
+                "Introduce lush green legumes and young pastures gradually over 7–10 days",
+                "Always feed dry roughage, straw, or hay before letting cows graze lush green grass",
+                "Avoid sudden shifts to high-starch or finely milled concentrate rations",
+                "Ensure unrestricted access to fresh drinking water and rumen buffering salts"
+            ]
+        elif any(w in lower_topic for w in ["milk fever", "hypocalcemia", "downer"]):
+            prevention_tips = [
+                "Feed a low-calcium, DCAD-balanced mineral ration during the late dry period (last 3 weeks)",
+                "Administer oral prophylactic calcium gel within 12 hours before and after calving",
+                "Avoid high-potassium forages (e.g. fresh lucerne) during the transition dry period",
+                "Ensure adequate dietary magnesium to maintain parathyroid calcium mobilization"
+            ]
+        elif any(w in lower_topic for w in ["theileriosis", "tick", "fever", "tick fever"]):
+            prevention_tips = [
+                "Apply regular acaricide pour-on or dip treatments to eliminate external ticks",
+                "Seal and whitewash shed wall crevices where ticks hide and lay eggs",
+                "Quarantine and inspect newly introduced cattle for tick vectors before mixing",
+                "Vaccinate crossbred dairy cattle against Theileriosis where approved vaccines exist"
+            ]
+        elif any(w in lower_topic for w in ["calf scours", "diarrhea", "scour"]):
+            prevention_tips = [
+                "Feed 3 to 4 liters of clean maternal colostrum within 2 to 4 hours of birth",
+                "House newborn calves in clean, elevated, well-ventilated pens with dry bedding",
+                "Sanitize calf feeding buckets and teats thoroughly after every milk feeding",
+                "Provide immediate oral rehydration electrolytes at the earliest sign of loose manure"
+            ]
+        elif any(w in lower_topic for w in ["fmd", "foot and mouth", "foot-and-mouth", "கோமாரி"]):
+            prevention_tips = [
+                "Follow mandatory government FMD vaccination schedules (every 6 months)",
+                "Strictly isolate and quarantine newly purchased cattle for at least 21 to 30 days",
+                "Install vehicle tire disinfection dip baths and footwear disinfectant footbaths at farm gate",
+                "Immediately restrict visitors, vehicles, and animal movement if any blister sores appear"
+            ]
+        elif prevention:
+            parts = re.split(r'[,;.]\s*(?:and\s*)?', prevention)
+            prevention_tips = [p.strip().capitalize() for p in parts if len(p.strip()) > 8][:4]
+
+        # Disease-specific screening & supportive prevention products from Chimertech catalog
+        matched_products: List[Dict[str, Any]] = []
+
+        if any(w in lower_topic for w in ["mastitis", "udder", "teat", "மடிநோய்"]):
+            matched_products = [
+                {
+                    "name": "Chimertech Quadmastest Mastitis Screening Device",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Early 4-quarter subclinical mastitis detection"
+                },
+                {
+                    "name": "Chimertech CMT Kit 500 ml with paddle",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Cow-side somatic cell subclinical mastitis screening"
+                }
+            ]
+        elif any(w in lower_topic for w in ["fmd", "foot and mouth", "foot-and-mouth", "கோமாரி"]):
+            matched_products = [
+                {
+                    "name": "Chimertech Bovine Foot and Mouth Disease (FMD) Antibody Rapid Test Kit",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Rapid cow-side antibody screening & herd surveillance for Foot-and-Mouth Disease (FMD)"
+                }
+            ]
+        elif any(w in lower_topic for w in ["bloat", "tympanites", "rumen"]):
+            matched_products = [
+                {
+                    "name": "Anti-Bloat Carminative Rumen Liquid",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Rapid rumen gas dispersion and frothy bloat relief"
+                }
+            ]
+        elif any(w in lower_topic for w in ["milk fever", "hypocalcemia", "downer"]):
+            matched_products = [
+                {
+                    "name": "Calci-Boost High-Potency Oral Calcium Gel",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Post-calving calcium restoration and milk fever prevention"
+                }
+            ]
+        elif any(w in lower_topic for w in ["theileriosis", "tick"]):
+            matched_products = [
+                {
+                    "name": "Chimertech Ectoparasiticide Pour-On",
+                    "url": "https://chimertech.shop",
+                    "purpose": "External tick, lice, and fly infestation control"
+                }
+            ]
+        elif any(w in lower_topic for w in ["scour", "calf", "diarrhea"]):
+            matched_products = [
+                {
+                    "name": "Oral Electrolyte Rehydration Formula (ORS)",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Calf dehydration reversal and gut electrolyte replenishment"
+                }
+            ]
+
+        # Build Voice-Ready Spoken Answer with Structured Formatting
+        spoken_parts = []
+        if answer_friendly:
+            spoken_parts.append(f"Sir, regarding {topic}: {answer_friendly}")
         if action:
             spoken_parts.append(f"Immediate action: {action}")
-        if prevention:
-            spoken_parts.append(f"Prevention: {prevention}")
-
-        # 3. Chimertech Product Recommendations
+        if prevention_tips:
+            spoken_parts.append(f"Prevention: {'; '.join(prevention_tips[:2])}.")
         if matched_products:
             prod_names = [f"{p.get('name')} ({p.get('purpose')})" for p in matched_products[:2]]
             spoken_parts.append(f"To test and manage this, use {'; and '.join(prod_names)}, available on chimertech.shop.")
-        else:
-            spoken_parts.append("Screening tools and teat hygiene dips are available on chimertech.shop.")
-
-        # 4. Red flag
         spoken_parts.append("If high fever or severe worsening occurs, call your veterinarian promptly.")
 
         full_spoken_text = " ".join(spoken_parts)
@@ -164,6 +282,7 @@ class VeterinaryRAGEngine:
             "clinical_answer": answer_friendly,
             "action": action,
             "prevention": prevention,
+            "prevention_tips": prevention_tips,
             "products": matched_products,
             "store_url": "https://chimertech.shop/",
             "spoken_response": full_spoken_text,

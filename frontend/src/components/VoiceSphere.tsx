@@ -28,17 +28,35 @@ export const VoiceSphere: React.FC<VoiceSphereProps> = ({ onToggleMic }) => {
         {[...Array(16)].map((_, i) => (
           <div
             key={i}
-            className={`wave-bar ${isListening || isSpeaking ? 'active' : ''}`}
+            className={`wave-bar ${isSpeaking || (isListening && vadStatus === 'speech') ? 'active' : ''}`}
             style={{
               animationDelay: `${i * 0.08}s`,
-              height: isListening ? `${10 + (i % 5) * 6}px` : isSpeaking ? `${8 + (i % 4) * 7}px` : '6px'
+              height: isSpeaking ? `${8 + (i % 4) * 7}px` : (isListening && vadStatus === 'speech') ? `${12 + (i % 5) * 8}px` : '6px',
+              backgroundColor: (isListening && vadStatus === 'speech') ? '#10b981' : undefined
             }}
           />
         ))}
       </div>
 
-      <div style={{ marginTop: '12px', fontSize: '0.85rem', fontWeight: 600, color: isListening ? 'var(--accent-rose)' : isSpeaking ? 'var(--accent-emerald)' : 'var(--text-secondary)' }}>
-        {isListening ? 'Listening (Silero VAD Active - speak in Tanglish/Tamil/English)...' : isSpeaking ? 'RAGUL Speaking (Start talking anytime to interrupt)' : 'Click Orb or Mic below to talk'}
+      <div style={{
+        marginTop: '12px',
+        fontSize: '0.85rem',
+        fontWeight: 600,
+        color: isSpeaking
+          ? 'var(--accent-emerald)'
+          : isListening
+            ? (vadStatus === 'speech' ? '#10b981' : vadStatus === 'processing' ? '#3b82f6' : 'var(--text-secondary)')
+            : 'var(--text-secondary)'
+      }}>
+        {isSpeaking
+          ? 'RAGUL Speaking (Start talking anytime to interrupt)'
+          : isListening
+            ? (vadStatus === 'speech'
+                ? 'Voice Active: Speaking detected...'
+                : vadStatus === 'processing'
+                  ? 'Transcribing speech...'
+                  : 'Listening (Noise Filtered: Silero VAD armed - speak anytime)')
+            : 'Click Orb or Mic below to talk'}
       </div>
 
       {interrupted && (

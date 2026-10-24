@@ -86,7 +86,7 @@ class LLMClient:
                     ]
                 
                 # Secondary parser: if model generated special tokens or function call syntax in text content
-                if not tool_calls and clean_content:
+                if tools and not tool_calls and clean_content:
                     # Match known tool names even if slightly clipped or prefixed
                     known_tools = [
                         "send_whatsapp_notification",

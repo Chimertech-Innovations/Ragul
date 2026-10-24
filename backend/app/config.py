@@ -17,16 +17,18 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # Database (Supabase PostgreSQL / Cloud)
-    SUPABASE_URL: str = ""
+    SUPABASE_URL: str = "https://gyuyfugxyauoiwfvmwjv.supabase.co"
     SUPABASE_KEY: str = ""
+    TARGET_FARM_ID: str = "584cab92-d75d-4aa0-824a-c07423aa6453"
     DATABASE_URL: str = "postgresql+asyncpg://postgres:RAGul.phd12@db.gyuyfugxyauoiwfvmwjv.supabase.co:5432/postgres"
+
     
     # LLM Settings (JarvisLabs / OpenAI / Groq / Ollama / vLLM)
     LLM_PROVIDER: str = "jarvislabs"
     JARVISLABS_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     LLM_API_BASE: str = "https://models.jarvislabs.net/v1"
-    LLM_MODEL_NAME: str = "gpt-oss-120b"
+    LLM_MODEL_NAME: str = "deepseek-v4.1-flash-1017"
     LLM_TEMPERATURE: float = 0.2
     
     # Audio & STT (faster-whisper)
@@ -36,9 +38,10 @@ class Settings(BaseSettings):
     
     # VAD Settings (Silero VAD)
     VAD_SAMPLE_RATE: int = 16000
-    VAD_THRESHOLD: float = 0.5
+    VAD_THRESHOLD: float = 0.58
     VAD_MIN_SPEECH_DURATION_MS: int = 250
-    VAD_MIN_SILENCE_DURATION_MS: int = 700
+    VAD_MIN_SILENCE_DURATION_MS: int = 800
+    VAD_ENERGY_THRESHOLD: float = 0.022
     
     # TTS Settings
     TTS_ENGINE: str = "browser_native"

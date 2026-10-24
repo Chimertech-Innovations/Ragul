@@ -12,7 +12,15 @@ export default defineConfig({
       },
       '/ws': {
         target: 'ws://127.0.0.1:8000',
-        ws: true
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err: any) => {
+            if (err?.code === 'ECONNRESET' || err?.message?.includes('socket has been ended')) {
+              return; // Normal websocket disconnect, suppress noisy stack trace
+            }
+            console.warn('[vite ws proxy]', err?.message || err);
+          });
+        }
       }
     }
   }

@@ -1,36 +1,112 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { User, Copy, Check, Sparkles, Volume2, Camera, Eye, X, Maximize2, ShieldCheck } from 'lucide-react';
+import { User, Copy, Check, Sparkles, Volume2, Camera, Eye, X, Maximize2, ShieldCheck, BarChart2 } from 'lucide-react';
 import { useRagulStore, ProofImageItem } from '../store/useRagulStore';
+import { FarmVisualChart, ChartDataPayload } from './FarmVisualChart';
 
-// Clean text and render formatted elements nicely without raw HTML tags or markdown noise
+type ParsedContentBlock =
+  | string
+  | { type: 'chart'; data: ChartDataPayload }
+  | { type: 'diagram'; content: string }
+  | { type: 'table'; header: string[]; rows: string[][] };
+
+// Clean text and render formatted elements nicely including visual charts, diagrammatic graphs & tables
 const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => {
-  // 1. Clean out raw HTML tags like <br>, <br/>, <p>, <b>
-  let clean = content
+  // 1. Extract ```chart ... ``` JSON blocks first
+  const chartRegex = /```(?:chart|json:chart)\s*([\s\S]*?)```/gi;
+  const rawChartBlocks: { placeholder: string; data: ChartDataPayload }[] = [];
+  let intermediate = content.replace(chartRegex, (_, jsonStr) => {
+    try {
+      const parsed = JSON.parse(jsonStr.trim());
+      const placeholder = `__FARM_CHART_BLOCK_${rawChartBlocks.length}__`;
+      rawChartBlocks.push({ placeholder, data: parsed });
+      return `\n\n${placeholder}\n\n`;
+    } catch (e) {
+      return '';
+    }
+  });
+
+  // 2. Clean out raw HTML tags like <br>, <p>, <b>
+  let clean = intermediate
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '')
     .trim();
 
-  // 2. Check if content contains markdown table
+  // 3. Process lines for charts, diagrammatic ASCII boxes, and markdown tables
   const lines = clean.split('\n');
-  const textBlocks: (string | { type: 'table'; header: string[]; rows: string[][] })[] = [];
+  const textBlocks: ParsedContentBlock[] = [];
 
   let inTable = false;
   let currentTableHeaders: string[] = [];
   let currentTableRows: string[][] = [];
+
+  let inDiagram = false;
+  let currentDiagramLines: string[] = [];
+
   let currentTextBuffer: string[] = [];
 
+  const flushTextBuffer = () => {
+    if (currentTextBuffer.length > 0) {
+      textBlocks.push(currentTextBuffer.join('\n'));
+      currentTextBuffer = [];
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    // Check for chart block placeholder
+    const matchedChart = rawChartBlocks.find(c => line.includes(c.placeholder));
+    if (matchedChart) {
+      if (inTable) {
+        textBlocks.push({ type: 'table', header: currentTableHeaders, rows: currentTableRows });
+        inTable = false;
+        currentTableHeaders = [];
+        currentTableRows = [];
+      }
+      if (inDiagram) {
+        textBlocks.push({ type: 'diagram', content: currentDiagramLines.join('\n') });
+        inDiagram = false;
+        currentDiagramLines = [];
+      }
+      flushTextBuffer();
+      textBlocks.push({ type: 'chart', data: matchedChart.data });
+      continue;
+    }
+
+    // Check for diagrammatic ASCII borders or block meters (e.g. ┌─, ├─, └─, ████)
+    const isDiagramBorder = line.startsWith('┌') || line.startsWith('├') || line.startsWith('└') || line.startsWith('+---') || line.startsWith('|===');
+    const isDiagramContent = isDiagramBorder || (inDiagram && (line.startsWith('│') || line.startsWith('|') || line.includes('██') || line.includes('▓▓')));
+
+    if (isDiagramContent) {
+      if (inTable) {
+        textBlocks.push({ type: 'table', header: currentTableHeaders, rows: currentTableRows });
+        inTable = false;
+        currentTableHeaders = [];
+        currentTableRows = [];
+      }
+      flushTextBuffer();
+      inDiagram = true;
+      currentDiagramLines.push(rawLine);
+      if (line.startsWith('└') || line.endsWith('+---') || (line.startsWith('+') && line.endsWith('+') && currentDiagramLines.length > 2)) {
+        textBlocks.push({ type: 'diagram', content: currentDiagramLines.join('\n') });
+        inDiagram = false;
+        currentDiagramLines = [];
+      }
+      continue;
+    } else if (inDiagram) {
+      textBlocks.push({ type: 'diagram', content: currentDiagramLines.join('\n') });
+      inDiagram = false;
+      currentDiagramLines = [];
+    }
+
+    // Check if line is Markdown Table
     if (line.startsWith('|') && line.endsWith('|')) {
       const cells = line.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-      
       const isSeparator = cells.every(c => /^[-:\s]+$/.test(c));
 
       if (!inTable) {
-        if (currentTextBuffer.length > 0) {
-          textBlocks.push(currentTextBuffer.join('\n'));
-          currentTextBuffer = [];
-        }
+        flushTextBuffer();
         inTable = true;
         currentTableHeaders = cells;
       } else if (!isSeparator) {
@@ -38,28 +114,23 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
       }
     } else {
       if (inTable) {
-        textBlocks.push({
-          type: 'table',
-          header: currentTableHeaders,
-          rows: currentTableRows
-        });
+        textBlocks.push({ type: 'table', header: currentTableHeaders, rows: currentTableRows });
         inTable = false;
         currentTableHeaders = [];
         currentTableRows = [];
       }
-      currentTextBuffer.push(lines[i]);
+      currentTextBuffer.push(rawLine);
     }
   }
 
   if (inTable && currentTableHeaders.length > 0) {
-    textBlocks.push({
-      type: 'table',
-      header: currentTableHeaders,
-      rows: currentTableRows
-    });
-  } else if (currentTextBuffer.length > 0) {
-    textBlocks.push(currentTextBuffer.join('\n'));
+    textBlocks.push({ type: 'table', header: currentTableHeaders, rows: currentTableRows });
   }
+  if (inDiagram && currentDiagramLines.length > 0) {
+    textBlocks.push({ type: 'diagram', content: currentDiagramLines.join('\n') });
+  }
+  flushTextBuffer();
+
 
   // Render text block with bold formatting and clean bullet lists
   const renderTextParagraph = (text: string, blockKey: number) => {
@@ -113,6 +184,18 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
       {textBlocks.map((block, idx) => {
         if (typeof block === 'string') {
           return renderTextParagraph(block, idx);
+        } else if (block.type === 'chart') {
+          return <FarmVisualChart key={idx} data={block.data} />;
+        } else if (block.type === 'diagram') {
+          return (
+            <div key={idx} className="diagrammatic-ascii-card">
+              <div className="diagram-card-header">
+                <BarChart2 size={13} className="text-cyan-400" />
+                <span>Diagrammatic Representation</span>
+              </div>
+              <pre className="diagrammatic-pre">{block.content}</pre>
+            </div>
+          );
         } else if (block.type === 'table') {
           return (
             <div key={idx} className="glassmorphic-table-container">
@@ -147,6 +230,7 @@ const FormattedMessageContent: React.FC<{ content: string }> = ({ content }) => 
         }
         return null;
       })}
+
     </div>
   );
 };

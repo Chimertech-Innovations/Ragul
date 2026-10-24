@@ -57,9 +57,15 @@ class FasterWhisperSTT:
                     best_of=3,
                     language=language,
                     task="transcribe",
-                    vad_filter=False,
+                    vad_filter=True,
+                    vad_parameters=dict(
+                        threshold=0.55,
+                        min_speech_duration_ms=250,
+                        min_silence_duration_ms=500,
+                        speech_pad_ms=150
+                    ),
                     condition_on_previous_text=False,
-                    initial_prompt="Hello Ragul, vanakkam, namaste, dairy farm AI, cattle, cow, milk yield, mastitis, feed, staff."
+                    initial_prompt="Hello Ragul, vanakkam, namaste, dairy farm AI, cattle, cow, COW001, COW002, COW003, CAM01, milk yield, mastitis, subclinical mastitis, Quadmastest, CMT screening, estrus heat detection, artificial insemination, manger feeding, green fodder, dry fodder, silage, rumination, bloat, fever, teat hygiene, farm workers."
                 )
                 segments = list(segments_gen)
 

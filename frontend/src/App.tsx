@@ -27,6 +27,8 @@ export const App: React.FC = () => {
     setListening,
     isSpeaking,
     setSpeaking,
+    vadStatus,
+    setVadStatus,
     isProcessing,
     setProcessing,
     addMessage,
@@ -55,16 +57,80 @@ export const App: React.FC = () => {
   };
 
   const handleSendMessageRef = React.useRef<(text?: string) => Promise<void>>(async () => {});
+  const activeAbortControllerRef = React.useRef<AbortController | null>(null);
+  const lastSentMessageRef = React.useRef<{ text: string; time: number }>({ text: '', time: 0 });
 
   const handleSendMessage = async (textToSend?: string) => {
-    const messageText = (textToSend || inputValue).trim();
-    if (!messageText) return;
+    const rawMessage = (textToSend || inputValue).trim();
+    if (!rawMessage) return;
 
-    addMessage({ role: 'user', content: messageText });
+    const normalizedMsg = rawMessage.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const now = Date.now();
+    const lastNormalized = lastSentMessageRef.current.text.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const timeSinceLast = now - lastSentMessageRef.current.time;
+
+    // Strict Duplicate Suppression:
+    // If the exact same question or a subset/extension was dispatched within the last 5 seconds, ignore duplicate!
+    if (
+      lastNormalized &&
+      (lastNormalized === normalizedMsg || 
+       (lastNormalized.length > 5 && normalizedMsg.length > 5 && (lastNormalized.includes(normalizedMsg) || normalizedMsg.includes(lastNormalized)))) &&
+      timeSinceLast < 5000
+    ) {
+      console.log('[App] Suppressed duplicate question dispatch:', rawMessage);
+      if (!textToSend) setInputValue('');
+      return;
+    }
+
+    lastSentMessageRef.current = { text: rawMessage, time: now };
+
+    // MANDATORY AUTHENTICATION CHECK: Only logged-in users can access the chatbot!
+    if (!currentUser) {
+      console.log('[App] Unauthenticated user attempt. Prompting login...');
+      setLoginModalOpen(true);
+      const isTamil = /[\u0B80-\u0BFF]/.test(rawMessage);
+      const isHindi = /[\u0900-\u097F]/.test(rawMessage);
+      const loginPromptText = isTamil
+        ? "வணக்கம் ஐயா! ரகுல் ஏஐ (RAGUL AI) உங்கள் பண்ணை உதவியாளரை அணுக, தயவுசெய்து உங்கள் பதிவு செய்யப்பட்ட தொலைபேசி எண் மற்றும் கடவுச்சொல் மூலம் உள்நுழையவும் (Login)."
+        : isHindi
+        ? "नमस्ते सर! RAGUL AI और अपने फार्म डेटा को एक्सेस करने के लिए, कृपया अपने पंजीकृत फोन नंबर और पासवर्ड से लॉगिन (Login) करें।"
+        : "Hello Sir! You are currently not logged in. Please log in with your registered phone number and password to access RAGUL AI, your live farm cameras, and cattle records.";
+
+      audioController.stopSpeaking();
+      setSpeaking(false);
+      triggerInterruption();
+
+      addMessage({ role: 'user', content: rawMessage });
+      addMessage({
+        role: 'assistant',
+        content: loginPromptText,
+        tool_meta: { requires_login: true }
+      });
+      if (!textToSend) setInputValue('');
+      setSpeaking(true);
+      audioController.speakText(loginPromptText, 'en-US');
+      setTimeout(() => setSpeaking(false), 4500);
+      return;
+    }
+
+    // Instant Barge-In / Interruption:
+    // When user speaks a new question, cancel previous speech and abort previous backend request!
+    if (activeAbortControllerRef.current) {
+      console.log('[App] Aborting previous in-flight request for new question:', rawMessage);
+      activeAbortControllerRef.current.abort();
+      activeAbortControllerRef.current = null;
+    }
+
+    audioController.stopSpeaking();
+    setSpeaking(false);
+    triggerInterruption();
+
+    addMessage({ role: 'user', content: rawMessage });
     if (!textToSend) setInputValue('');
     setProcessing(true);
 
     const controller = new AbortController();
+    activeAbortControllerRef.current = controller;
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
@@ -73,7 +139,7 @@ export const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          message: messageText,
+          message: rawMessage,
           language: 'auto',
           session_id: sessionId,
           farm_id: currentUser?.farm_id || null
@@ -81,11 +147,20 @@ export const App: React.FC = () => {
       });
       clearTimeout(timeoutId);
 
+      // If aborted by a subsequent question, drop quietly
+      if (controller.signal.aborted) return;
+
       if (response.ok) {
         const data = await response.json();
+        if (controller.signal.aborted) return;
+
         setProcessing(false);
         if (data.session_id && data.session_id !== sessionId) {
           setSessionId(data.session_id);
+        }
+
+        if (data.tool_meta?.requires_login) {
+          setLoginModalOpen(true);
         }
 
         addMessage({
@@ -95,17 +170,9 @@ export const App: React.FC = () => {
           proof_images: data.proof_images || data.tool_meta?.proof_images || []
         });
 
-        // Trigger Talking Animation & TTS Audio (strip markdown markers for natural voice)
-        const cleanSpoken = data.response
-          .replace(/\*\*/g, '')
-          .replace(/[•▸\-]/g, '')
-          .replace(/📸\s*\*.*?\*/g, '')
-          .trim();
-
+        // Trigger Talking Animation & TTS Audio
         setSpeaking(true);
-        audioController.speakText(cleanSpoken, 'en-US');
-        const estimatedDurationMs = Math.max(3000, cleanSpoken.length * 65);
-        setTimeout(() => setSpeaking(false), estimatedDurationMs);
+        audioController.speakText(data.response, 'en-US');
       } else {
         setProcessing(false);
         addMessage({
@@ -115,6 +182,10 @@ export const App: React.FC = () => {
       }
     } catch (e: any) {
       clearTimeout(timeoutId);
+      if (controller.signal.aborted) {
+        console.log('[App] In-flight request successfully cancelled for second question.');
+        return;
+      }
       setProcessing(false);
       console.error('Chat error:', e);
       const isTimeout = e?.name === 'AbortError';
@@ -124,6 +195,10 @@ export const App: React.FC = () => {
           ? 'Sir, response took longer than expected (>25 seconds). The AI model or farm database is taking longer to respond. Please try again or ask your question directly.'
           : 'Backend offline. Please ensure the FastAPI server is active on port 8000.'
       });
+    } finally {
+      if (activeAbortControllerRef.current === controller) {
+        activeAbortControllerRef.current = null;
+      }
     }
   };
 
@@ -133,6 +208,11 @@ export const App: React.FC = () => {
     audioController.setCallbacks({
       onInterruption: () => {
         triggerInterruption();
+        setSpeaking(false);
+        if (activeAbortControllerRef.current) {
+          activeAbortControllerRef.current.abort();
+          activeAbortControllerRef.current = null;
+        }
       },
       onTranscript: (text, lang) => {
         if (text && text.trim()) {
@@ -141,6 +221,9 @@ export const App: React.FC = () => {
       },
       onAssistantResponse: (text, toolMeta) => {
         setProcessing(false);
+        if (toolMeta?.requires_login) {
+          setLoginModalOpen(true);
+        }
         addMessage({
           role: 'assistant',
           content: text,
@@ -149,16 +232,17 @@ export const App: React.FC = () => {
         });
       },
       onSilenceEnd: () => {
-        console.log('[App] User silent. Turning mic off and querying backend...');
-        setListening(false);
+        console.log('[App] User speech query received. Querying backend while keeping microphone continuously armed for hands-free dialogue...');
+        // CRITICAL: Do NOT setListening(false)! Keep isListening true for continuous duplex dialogue!
       },
       onSpeechEnd: () => {
-        console.log('[App] Assistant finished speaking. Auto re-arming microphone...');
+        console.log('[App] Assistant finished speaking. Keeping microphone listening for Sir...');
         setSpeaking(false);
+        setListening(true);
         audioController.startStreaming(sessionId).then(() => {
           setListening(true);
         }).catch((err) => {
-          console.warn('[App] Auto mic re-arm notice:', err);
+          console.warn('[App] Auto mic keep-alive notice:', err);
         });
       },
       onNoiseAlert: (msg) => {
@@ -166,6 +250,7 @@ export const App: React.FC = () => {
         console.warn(`[App] Ambient audio notice: ${msg}`);
       },
       onClapWake: () => {
+        if (!currentUser) return; // Do not wake mic if not logged in
         if (!audioController.isSynthesizing) {
           console.log('[App] Clap detected! Activating listening mode...');
           audioController.startStreaming(sessionId).then(() => {
@@ -174,15 +259,55 @@ export const App: React.FC = () => {
             console.warn('[App] Clap mic wake notice:', err);
           });
         }
+      },
+      onVadStatus: (status) => {
+        setVadStatus(status);
       }
     });
 
     return () => {
       audioController.stopStreaming();
     };
-  }, [sessionId, triggerInterruption, setProcessing, setListening, setSpeaking]);
+  }, [sessionId, triggerInterruption, setProcessing, setListening, setSpeaking, setVadStatus, currentUser]);
+
+  // Hands-free continuous duplex mode: Auto-arm mic on first user interaction so user doesn't need to manually click
+  useEffect(() => {
+    const handleFirstUserInteraction = () => {
+      if (!currentUser) return; // Do not auto-arm mic for unauthenticated users!
+      if (!audioController.isListening && !isListening) {
+        console.log('[App] First user interaction detected. Auto-arming hands-free microphone...');
+        audioController.startStreaming(sessionId).then(() => {
+          setListening(true);
+        }).catch((err) => {
+          console.log('[App] Mic waiting for explicit user gesture:', err);
+        });
+      }
+    };
+
+    window.addEventListener('click', handleFirstUserInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstUserInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstUserInteraction);
+      window.removeEventListener('keydown', handleFirstUserInteraction);
+    };
+  }, [sessionId, isListening, setListening, currentUser]);
 
   const handleToggleMic = async () => {
+    if (!currentUser) {
+      setLoginModalOpen(true);
+      const loginPromptText = "Sir, please log in with your registered phone number and password to use voice conversation and access your farm chatbot.";
+      addMessage({
+        role: 'assistant',
+        content: loginPromptText,
+        tool_meta: { requires_login: true }
+      });
+      setSpeaking(true);
+      audioController.speakText(loginPromptText, 'en-US');
+      setTimeout(() => setSpeaking(false), 4500);
+      return;
+    }
+
     if (isListening) {
       audioController.stopStreaming();
       setListening(false);

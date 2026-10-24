@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any
 import httpx
@@ -208,7 +209,7 @@ async def chat_endpoint(request: ChatRequest):
     return ChatResponse(
         session_id=session_id,
         response=response_text,
-        tool_meta=tool_meta if tool_meta.get("executed") else None,
+        tool_meta=tool_meta if (tool_meta and (tool_meta.get("executed") or tool_meta.get("requires_login"))) else None,
         proof_images=proof_images,
         detected_language=request.language or "tanglish"
     )
@@ -233,22 +234,47 @@ async def websocket_voice_endpoint(websocket: WebSocket):
                     audio_buffer.extend(chunk)
                     if vad_state == "speech_start":
                         await websocket.send_json({"type": "interrupt"})
+                        await websocket.send_json({"type": "vad_status", "status": "speech"})
                     # Safety cap buffer at ~10 seconds of 16kHz PCM16 (320,000 bytes)
                     if len(audio_buffer) > 320000:
                         audio_buffer = audio_buffer[-320000:]
-                elif vad_state == "speech_end" and len(audio_buffer) >= 16000:
-                    speech_bytes = bytes(audio_buffer)
-                    audio_buffer.clear()
-                    
-                    # Transcribe clean buffered speech
-                    stt_result = await stt_engine.transcribe_audio_bytes(speech_bytes)
-                    user_text = stt_result.get("text", "").strip()
-                    quality = stt_result.get("quality", "low_confidence")
-                    confidence = stt_result.get("confidence", 0.0)
-                    
-                    # Filter out ambient noise hallucinations
-                    if not user_text or quality == "low_confidence" or confidence < 0.35 or len(user_text) < 2:
-                        continue
+                elif vad_state == "speech_end":
+                    if len(audio_buffer) >= 16000:
+                        speech_bytes = bytes(audio_buffer)
+                        audio_buffer.clear()
+                        await websocket.send_json({"type": "vad_status", "status": "processing"})
+                        
+                        # Transcribe clean buffered speech
+                        stt_result = await stt_engine.transcribe_audio_bytes(speech_bytes)
+                        user_text = stt_result.get("text", "").strip()
+                        quality = stt_result.get("quality", "low_confidence")
+                        confidence = stt_result.get("confidence", 0.0)
+                        
+                        # Filter out ambient noise hallucinations and acoustic breath triggers
+                        GHOST_HALLUCINATIONS = {
+                            "thank you", "thank you.", "thank you for watching", "subtitles by",
+                            "amara.org", "english subtitles", "you", "subscribe", "please subscribe",
+                            "the end", "i don't know", "bye bye", "watching video", "hide over",
+                            "shh", "uh", "um", "ah", "hmm", "okay", "yes", "so", "pashux", "cough",
+                            "laughter", "applause", "music", "...", ".", "?", "-", "--", "huh", "oh", "er"
+                        }
+                        lower_text = user_text.lower().strip()
+                        clean_letters = re.sub(r'[^a-zA-Z0-9\u0B80-\u0BFF\u0900-\u097F]', '', lower_text)
+
+                        is_noise_filler = (
+                            not user_text
+                            or len(clean_letters) < 3
+                            or quality == "low_confidence"
+                            or confidence < 0.45
+                            or stt_result.get("no_speech_prob", 0.0) > 0.55
+                            or lower_text in GHOST_HALLUCINATIONS
+                            or clean_letters in {"uh", "um", "ah", "hmm", "shh", "huh", "mm", "er", "ha", "you", "so", "oh"}
+                            or any(g in lower_text for g in ["subtitles by", "amara.org", "thank you for watching", "please subscribe"])
+                        )
+                        if is_noise_filler:
+                            logger.info(f"[WS] Dropped noise transcript: '{user_text}' (conf: {confidence:.2f}, clean: '{clean_letters}')")
+                            await websocket.send_json({"type": "vad_status", "status": "idle"})
+                            continue
                     
                     # Notify frontend of high-confidence transcript
                     await websocket.send_json({
@@ -288,6 +314,10 @@ async def websocket_voice_endpoint(websocket: WebSocket):
                     msg_type = payload.get("type")
                     if msg_type == "ping":
                         await websocket.send_json({"type": "pong"})
+                    elif msg_type == "reset_vad":
+                        vad_processor.reset()
+                        audio_buffer.clear()
+                        await websocket.send_json({"type": "vad_status", "status": "idle"})
                     elif msg_type == "set_farm":
                         client_farm_id = payload.get("farm_id")
                         logger.info(f"[WS] Socket associated with farm_id: {client_farm_id}")

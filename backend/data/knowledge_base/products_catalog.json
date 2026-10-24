@@ -1,5 +1,5 @@
 {
-  "schema_version": "4.0",
+  "schema_version": "4.1",
   "catalog_name": "RAGUL Chimertech Cattle Product Recommendation Knowledge Base",
   "generated_on": "2026-10-07",
   "intended_path": "d:\\Ragul Ai\\backend\\data\\knowledge_base\\products_catalog.json",
@@ -30,7 +30,11 @@
       "name",
       "role",
       "use_cases",
-      "safe_answer"
+      "safe_answer",
+      "description_detailed",
+      "farmer_friendly_description",
+      "how_to_use_overview",
+      "key_limitations_and_safety"
     ],
     "scenario_embed_fields": [
       "intent",
@@ -67,7 +71,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A portable, quarter-wise electrical-conductivity-based screening device for dairy cattle. It helps farm teams compare udder-quarter milk readings and flag patterns that warrant closer mastitis assessment. Designed for routine cow-side screening, monitoring and record keeping.",
+      "how_to_use_overview": "Screen all four quarters in a consistent order, identify the animal, and review flagged results alongside udder examination and milk appearance.",
+      "key_limitations_and_safety": "A screening alert alone cannot confirm the pathogen, prescribe treatment or prove a cow is free of mastitis.",
+      "farmer_friendly_description": "Quadmastest Device is for mastitis detection, udder health screening. A portable, quarter-wise electrical-conductivity-based screening device for dairy cattle. It helps farm teams compare udder-quarter milk readings and flag patterns that warrant closer mastitis assessment. Designed for routine cow-side screening, monitoring and record keeping. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P002",
@@ -91,7 +110,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A portable wireless thermal-printer solution associated with Quadmastest screening, intended to produce paper records of quarter-wise test outcomes for farm follow-up and traceability.",
+      "how_to_use_overview": "Use with the supported Quadmastest setup and keep printed reports linked to the correct animal and test date.",
+      "key_limitations_and_safety": "Printer pairing, exact compatibility, included accessories and battery specifications must be checked against the actual listing.",
+      "farmer_friendly_description": "Quadmastest Pro Portable Wireless Thermal Printer is for mastitis detection, quarter-wise screening. A portable wireless thermal-printer solution associated with Quadmastest screening, intended to produce paper records of quarter-wise test outcomes for farm follow-up and traceability. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P003",
@@ -115,7 +149,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 mL California Mastitis Test (CMT) reagent kit supplied with a paddle for cow-side screening of increased somatic-cell-related milk changes in individual quarters.",
+      "how_to_use_overview": "Collect a small, separate foremilk sample from each quarter and perform the CMT according to the supplied directions; interpret reaction scores in context.",
+      "key_limitations_and_safety": "A CMT reaction is a screening result, not a laboratory cell count or pathogen identification.",
+      "farmer_friendly_description": "Chimertech CMT Kit 500 ml with paddle is for subclinical mastitis screening, CMT. A 500 mL California Mastitis Test (CMT) reagent kit supplied with a paddle for cow-side screening of increased somatic-cell-related milk changes in individual quarters. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P004",
@@ -139,7 +188,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-litre California Mastitis Test kit supplied with a paddle and dispenser, suited to repeat quarter-wise screening at farms and milk collection operations.",
+      "how_to_use_overview": "Use the dispenser to support consistent handling, while following label instructions for milk-to-reagent quantities and reading time.",
+      "key_limitations_and_safety": "A positive screen needs interpretation against udder findings and appropriate veterinary or laboratory follow-up.",
+      "farmer_friendly_description": "Chimertech CMT Kit 1 Litre with Paddle and dispenser is for subclinical mastitis screening, CMT. A one-litre California Mastitis Test kit supplied with a paddle and dispenser, suited to repeat quarter-wise screening at farms and milk collection operations. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P005",
@@ -162,7 +226,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A five-litre bulk pack of CMT reagent for farms and field teams that perform mastitis screening across multiple animals.",
+      "how_to_use_overview": "Dispense only into clean suitable containers and use with a compatible CMT paddle according to instructions.",
+      "key_limitations_and_safety": "This pack size does not by itself indicate that a paddle or dispenser is included.",
+      "farmer_friendly_description": "Chimertech CMT Kit 5 litre is for larger farm CMT use, subclinical mastitis screening. A five-litre bulk pack of CMT reagent for farms and field teams that perform mastitis screening across multiple animals. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P006",
@@ -185,7 +264,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A twenty-litre bulk CMT reagent option for high-throughput herd screening programmes, service providers and large dairy operations.",
+      "how_to_use_overview": "Plan hygienic decanting, reagent storage and quarter-wise recording for repeated screening activities.",
+      "key_limitations_and_safety": "Avoid claiming an exact tests-per-pack count without an approved test volume.",
+      "farmer_friendly_description": "Chimertech CMT Kit 20 litre is for large herd CMT use, subclinical mastitis screening. A twenty-litre bulk CMT reagent option for high-throughput herd screening programmes, service providers and large dairy operations. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P007",
@@ -208,7 +302,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A visual milk-line indicator intended for installation with a compatible milking machine to help operators notice visible clots or abnormal milk during milking.",
+      "how_to_use_overview": "Inspect the indicator during milking and investigate visible abnormalities using a complete udder-health process.",
+      "key_limitations_and_safety": "Clear-looking milk does not rule out subclinical mastitis.",
+      "farmer_friendly_description": "Mastitis indicator for milking machines. is for visual clot monitoring, machine milking mastitis indicator. A visual milk-line indicator intended for installation with a compatible milking machine to help operators notice visible clots or abnormal milk during milking. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P008",
@@ -232,7 +341,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-kilogram post-milking teat-care product used in routine udder hygiene after milking to support consistent teat coverage and management practices.",
+      "how_to_use_overview": "Apply as directed after removing the milking unit, ensuring appropriate teat coverage and following the labelled contact and handling instructions.",
+      "key_limitations_and_safety": "Do not assume barrier duration, active ingredients or antimicrobial kill claims without the approved label.",
+      "farmer_friendly_description": "FineKine 1 kg is for post-milking teat care, mastitis prevention routine. A one-kilogram post-milking teat-care product used in routine udder hygiene after milking to support consistent teat coverage and management practices. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P009",
@@ -256,7 +380,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-kilogram FineKine teat-care pack bundled with a dip cup for practical post-milking teat-hygiene routines.",
+      "how_to_use_overview": "Use the dip cup to apply the product as directed and clean the cup regularly to limit contamination.",
+      "key_limitations_and_safety": "Does not replace machine maintenance, milking hygiene or treatment of existing udder disease.",
+      "farmer_friendly_description": "FineKine 1 kg with dip cup is for post-milking teat care, teat dipping. A one-kilogram FineKine teat-care pack bundled with a dip cup for practical post-milking teat-hygiene routines. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P010",
@@ -280,7 +419,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-kilogram pre-milking teat-hygiene product intended to help remove contamination from teats during the preparation stage before attaching the milking cluster.",
+      "how_to_use_overview": "Follow pre-milking application instructions, then thoroughly dry teats with a suitable clean single-use or cow-dedicated material before milking.",
+      "key_limitations_and_safety": "Avoid introducing residual cleaning product into milk; do not assert an unverified contact time.",
+      "farmer_friendly_description": "MooFoam 1Kg is for pre-milking teat cleaning, teat hygiene. A one-kilogram pre-milking teat-hygiene product intended to help remove contamination from teats during the preparation stage before attaching the milking cluster. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P011",
@@ -304,7 +458,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A MooFoam pre-milking teat-care pack that includes a dip cup for structured teat preparation before milking.",
+      "how_to_use_overview": "Apply with the included cup according to directions, allow any labelled contact time, then wipe and dry before milking.",
+      "key_limitations_and_safety": "Only the current label can confirm dilution and whether the product is ready to use.",
+      "farmer_friendly_description": "MooFoam 1Kg with Dip Cup Combo is for pre-milking teat cleaning, teat hygiene. A MooFoam pre-milking teat-care pack that includes a dip cup for structured teat preparation before milking. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P012",
@@ -328,7 +497,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-litre iodine-based post-milking teat dip designed for teat-hygiene programmes following milking.",
+      "how_to_use_overview": "Use the approved application technique and follow the label for coverage, use concentration and handling.",
+      "key_limitations_and_safety": "Iodine concentration, residue safety and dilution instructions are not specified in this catalog.",
+      "farmer_friendly_description": "Iodokine 1L is for post-milking teat dip, iodine teat hygiene. A one-litre iodine-based post-milking teat dip designed for teat-hygiene programmes following milking. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P013",
@@ -352,7 +536,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-kilogram teat-hygiene product in the udder-care range for supporting cleanliness within the dairy milking routine.",
+      "how_to_use_overview": "Verify whether the current label specifies pre- or post-milking application before making a usage recommendation.",
+      "key_limitations_and_safety": "Do not treat the product as an antibiotic or claim it cures clinical mastitis.",
+      "farmer_friendly_description": "Iogiene 1Kg is for teat hygiene, udder hygiene. A one-kilogram teat-hygiene product in the udder-care range for supporting cleanliness within the dairy milking routine. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P014",
@@ -376,7 +575,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 200 mL topical udder-care spray positioned as supportive care in udder-health management and the ethnoveterinary product range.",
+      "how_to_use_overview": "Use externally only if the current label directs topical use and seek veterinary assessment for swelling, pain, fever or visibly abnormal milk.",
+      "key_limitations_and_safety": "No therapeutic cure, formulation ingredient or withdrawal-period claim is established by the source data.",
+      "farmer_friendly_description": "Mastoveda Spray 200 ml is for udder support, mastitis support. A 200 mL topical udder-care spray positioned as supportive care in udder-health management and the ethnoveterinary product range. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P015",
@@ -400,7 +614,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A herbal teat spray intended for routine teat-care and hygiene within mastitis-risk management practices.",
+      "how_to_use_overview": "Apply only as the product instructions specify and combine with hygienic milking and regular screening.",
+      "key_limitations_and_safety": "Herbal does not automatically mean clinically proven, residue-free or adequate treatment for infection.",
+      "farmer_friendly_description": "H-Udderon, Herbal Teat Spray for Mastitis prevention. is for teat hygiene, mastitis prevention routine. A herbal teat spray intended for routine teat-care and hygiene within mastitis-risk management practices. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P016",
@@ -424,7 +653,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 200 mL external tick-management spray offered for use within a broader ectoparasite-control programme for cattle.",
+      "how_to_use_overview": "Follow the labelled species, application sites and frequency; inspect the herd and environment for continued tick challenge.",
+      "key_limitations_and_safety": "Do not infer active ingredients, pregnancy safety, milk withholding or a guaranteed tick-kill percentage.",
+      "farmer_friendly_description": "Tic Tick Tic 200ml Spray is for ticks, external parasites. A 200 mL external tick-management spray offered for use within a broader ectoparasite-control programme for cattle. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P017",
@@ -448,7 +692,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 g talc-format tick-management product intended for external-parasite control within routine cattle management.",
+      "how_to_use_overview": "Use only on labelled body areas and avoid inhalation or contamination of feed, eyes and milk.",
+      "key_limitations_and_safety": "Exact application rate, efficacy, age limitations and withholding instructions require the label.",
+      "farmer_friendly_description": "Tick Talc 500 g is for ticks, external parasites. A 500 g talc-format tick-management product intended for external-parasite control within routine cattle management. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P018",
@@ -472,7 +731,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A cattle estrus-detection field tool intended to support recognition of heat and decisions about when to arrange breeding services.",
+      "how_to_use_overview": "Interpret the device indication alongside standing heat behaviour, breeding history and trained inseminator advice.",
+      "key_limitations_and_safety": "Do not claim ovulation confirmation or a guaranteed conception rate.",
+      "farmer_friendly_description": "Estrus Gun Cattle is for heat detection, estrus detection. A cattle estrus-detection field tool intended to support recognition of heat and decisions about when to arrange breeding services. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P019",
@@ -496,7 +770,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A single-test bovine pregnancy rapid-test kit used for post-breeding pregnancy screening within its validated sample type and testing window.",
+      "how_to_use_overview": "Confirm the correct days after breeding, sample handling and reading time from the test insert before testing.",
+      "key_limitations_and_safety": "A negative early test or a positive test does not replace veterinary confirmation when results are uncertain.",
+      "farmer_friendly_description": "PregKine Bovine Pregnancy Rapid Test - 1 Test is for pregnancy test, pregnancy screening. A single-test bovine pregnancy rapid-test kit used for post-breeding pregnancy screening within its validated sample type and testing window. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P020",
@@ -520,7 +809,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A twenty-test pack of bovine rapid pregnancy tests designed for repeated herd-level pregnancy screening.",
+      "how_to_use_overview": "Track animal IDs, breeding dates and individual test results, and follow the manufacturer-specified sample and test window.",
+      "key_limitations_and_safety": "Do not invent how early this test detects pregnancy or claim ultrasound-equivalent accuracy.",
+      "farmer_friendly_description": "PregKine Bovine Pregnancy Rapid Test - 20 Test is for pregnancy test, herd pregnancy screening. A twenty-test pack of bovine rapid pregnancy tests designed for repeated herd-level pregnancy screening. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P021",
@@ -545,7 +849,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A camera-enabled digital artificial-insemination gun intended as professional equipment to assist trained breeding technicians with insemination procedures.",
+      "how_to_use_overview": "Use only by appropriately trained personnel under veterinary reproductive management and animal-welfare protocols.",
+      "key_limitations_and_safety": "Camera specifications, supported species and procedure accuracy require product documentation.",
+      "farmer_friendly_description": "Digital artificial insemination gun with camera for cattle and horse. is for artificial insemination, AI gun. A camera-enabled digital artificial-insemination gun intended as professional equipment to assist trained breeding technicians with insemination procedures. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P022",
@@ -569,7 +888,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A portable two-litre liquid-nitrogen container intended for storage and transport of frozen bovine semen under appropriate cryogenic conditions.",
+      "how_to_use_overview": "Use with suitable protective equipment, ventilation and regular nitrogen-level monitoring according to equipment instructions.",
+      "key_limitations_and_safety": "Do not infer hold time, evaporation rate or storage capacity from volume alone.",
+      "farmer_friendly_description": "Portable Liquid Nitrogen [LN2] Container for Cattle Semen Storage 2 Litre is for semen storage, liquid nitrogen. A portable two-litre liquid-nitrogen container intended for storage and transport of frozen bovine semen under appropriate cryogenic conditions. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P023",
@@ -592,7 +926,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A semen-thawing instrument used to bring frozen semen to the temperature required by the relevant artificial-insemination protocol.",
+      "how_to_use_overview": "Follow the semen supplier’s prescribed thaw temperature and duration; monitor equipment temperature before use.",
+      "key_limitations_and_safety": "No universal thaw setting should be presented as applicable to every semen straw.",
+      "farmer_friendly_description": "Semen thawer is for semen thawing, artificial insemination preparation. A semen-thawing instrument used to bring frozen semen to the temperature required by the relevant artificial-insemination protocol. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P024",
@@ -616,7 +965,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-kilogram mineral supplement intended to support cattle mineral intake as one component of a balanced feeding programme.",
+      "how_to_use_overview": "Choose quantity and feeding schedule based on the product analysis, animal class and the full ration.",
+      "key_limitations_and_safety": "Do not promise improved fertility or diagnose deficiency without nutritional assessment.",
+      "farmer_friendly_description": "Mineral Max (1 Kg) is for mineral supplementation, cattle minerals. A one-kilogram mineral supplement intended to support cattle mineral intake as one component of a balanced feeding programme. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P025",
@@ -640,7 +1004,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-litre nutritional supplement positioned for calcium and mineral support, including discussions about transition-period feeding.",
+      "how_to_use_overview": "Follow the approved label and obtain veterinary assistance promptly for an animal unable to rise after calving.",
+      "key_limitations_and_safety": "Do not recommend oral administration to a down or swallowing-impaired animal.",
+      "farmer_friendly_description": "NutraKine Calcdex 1L is for calcium support, mineral support. A one-litre nutritional supplement positioned for calcium and mineral support, including discussions about transition-period feeding. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P026",
@@ -665,7 +1044,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 mL young-calf nutritional supplement intended to complement a suitable colostrum, milk and starter-feeding programme.",
+      "how_to_use_overview": "Follow calf age-specific label directions and prioritise timely colostrum management for newborns.",
+      "key_limitations_and_safety": "Product ingredients, dose and growth-rate claims are not included in the current source.",
+      "farmer_friendly_description": "NutraKine Calfster 500 ml is for calf supplement, calf growth support. A 500 mL young-calf nutritional supplement intended to complement a suitable colostrum, milk and starter-feeding programme. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P027",
@@ -689,7 +1083,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 100 mL product listed for deworming-related support and parasite-management discussions in cattle.",
+      "how_to_use_overview": "Check the complete active-ingredient label and consult the herd veterinarian on whether and when parasite treatment is indicated.",
+      "key_limitations_and_safety": "The name does not establish whether it is an approved anthelmintic, its dose or its milk/meat withdrawal period.",
+      "farmer_friendly_description": "NutraKine D-Wormer 100 ml is for deworming, internal parasites. A 100 mL product listed for deworming-related support and parasite-management discussions in cattle. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P028",
@@ -713,7 +1122,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 g nutrition-support product marketed for the reproductive and breeding-management context in dairy cattle.",
+      "how_to_use_overview": "Assess energy balance, body condition, heat detection and veterinary reproductive status while following label feeding instructions.",
+      "key_limitations_and_safety": "No product alone can guarantee cycling, conception or fertility improvement.",
+      "farmer_friendly_description": "NutraKine Fertility Booster 500 g is for fertility nutrition, breeding support. A 500 g nutrition-support product marketed for the reproductive and breeding-management context in dairy cattle. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P029",
@@ -737,7 +1161,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 g cattle nutritional supplement intended to support body-condition and growth-oriented feeding plans.",
+      "how_to_use_overview": "Review forage quality, total energy and protein intake, and body-condition trends before choosing a supplementation plan.",
+      "key_limitations_and_safety": "Do not promise a specified daily weight gain without controlled evidence.",
+      "farmer_friendly_description": "NutraKine Gain 500 g is for weight gain support, body condition. A 500 g cattle nutritional supplement intended to support body-condition and growth-oriented feeding plans. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P030",
@@ -761,7 +1200,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-litre cattle supplement positioned for liver and appetite-related nutritional support within overall health management.",
+      "how_to_use_overview": "Evaluate persistent inappetence, feed changes and systemic illness rather than relying solely on a supplement.",
+      "key_limitations_and_safety": "Do not claim that it treats fatty liver or other diagnosed liver disease.",
+      "farmer_friendly_description": "NutraKine Liver Tonic 1 litre is for liver support, appetite support. A one-litre cattle supplement positioned for liver and appetite-related nutritional support within overall health management. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P031",
@@ -784,7 +1238,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 200 mL nutritional-support product positioned within udder-health and mastitis-support programmes.",
+      "how_to_use_overview": "Use only as labelled supportive care and pair with quarter-level screening and veterinary guidance when illness is suspected.",
+      "key_limitations_and_safety": "Do not present it as a replacement for indicated mastitis treatment.",
+      "farmer_friendly_description": "NutraKine MastoVita 200ml is for udder nutritional support, mastitis support program. A 200 mL nutritional-support product positioned within udder-health and mastitis-support programmes. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P032",
@@ -808,7 +1277,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 g nutritional supplement intended for lactation and milk-output support within an appropriately formulated dairy ration.",
+      "how_to_use_overview": "Check water availability, feed quality, days in milk, heat stress and udder health when investigating a fall in yield.",
+      "key_limitations_and_safety": "No guaranteed litre-per-day milk increase is supported by this catalog.",
+      "farmer_friendly_description": "NutraKine Milk Booster 500 g is for milk production support, lactation nutrition. A 500 g nutritional supplement intended for lactation and milk-output support within an appropriately formulated dairy ration. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P033",
@@ -832,7 +1316,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 300 g phosphorus-oriented nutritional supplement for cattle ration-management programmes.",
+      "how_to_use_overview": "Evaluate total ration mineral balance before adding phosphorus supplements and use the current label.",
+      "key_limitations_and_safety": "Excess mineral supplementation can be harmful; deficiency should not be guessed from nonspecific signs.",
+      "farmer_friendly_description": "NutraKine Phos+ 300 g is for phosphorus support, mineral nutrition. A 300 g phosphorus-oriented nutritional supplement for cattle ration-management programmes. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P034",
@@ -856,7 +1355,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 500 g calf nutrition-support product for use as part of planned young-stock feeding and management.",
+      "how_to_use_overview": "Confirm the current ingredient profile and feeding stage before selecting it for a calf.",
+      "key_limitations_and_safety": "The current catalog does not establish that this is a probiotic or provide strain counts.",
+      "farmer_friendly_description": "Probos+ Chimertech (500g) is for calf nutrition, young stock support. A 500 g calf nutrition-support product for use as part of planned young-stock feeding and management. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P035",
@@ -881,7 +1395,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A ten-kilogram calf milk-replacer pack intended to provide a prepared liquid feed for calves when a suitable milk-replacement feeding programme is needed.",
+      "how_to_use_overview": "Mix only to the labelled concentration and temperature, use hygienic equipment, and ensure newborn calves receive appropriate colostrum.",
+      "key_limitations_and_safety": "Do not assume the formulation, age suitability or mixing ratio from the pack name.",
+      "farmer_friendly_description": "ServaTac-Milk replacer for calf. 10kg is for calf milk replacer, calf feeding. A ten-kilogram calf milk-replacer pack intended to provide a prepared liquid feed for calves when a suitable milk-replacement feeding programme is needed. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P036",
@@ -905,7 +1434,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A twenty-five-kilogram bulk pack of calf milk replacer for farms managing regular or multiple-calf feeding programmes.",
+      "how_to_use_overview": "Store the powder dry, mix precisely as labelled and monitor calf intake, hydration and growth.",
+      "key_limitations_and_safety": "A larger pack has the same need for correct mixing and is not a substitute for colostrum.",
+      "farmer_friendly_description": "ServaTac-Milk replacer for calf. 25kg is for calf milk replacer, large calf feeding program. A twenty-five-kilogram bulk pack of calf milk replacer for farms managing regular or multiple-calf feeding programmes. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P037",
@@ -929,7 +1473,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A calf-feeding bottle designed to deliver milk or colostrum individually to calves using an appropriate teat or nipple assembly.",
+      "how_to_use_overview": "Feed in a safe position with a clean bottle and monitor sucking and swallowing.",
+      "key_limitations_and_safety": "Do not force-feed an animal with impaired swallowing; seek veterinary help.",
+      "farmer_friendly_description": "Calf feeding bottle. is for bottle feeding calf, calf milk feeding. A calf-feeding bottle designed to deliver milk or colostrum individually to calves using an appropriate teat or nipple assembly. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P038",
@@ -953,7 +1512,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A replacement rubber nipple intended for use with a compatible calf milk-feeding bottle.",
+      "how_to_use_overview": "Check fit and milk flow, clean after use and replace if cracked or damaged.",
+      "key_limitations_and_safety": "Bottle compatibility and material specifications need confirmation.",
+      "farmer_friendly_description": "Calf milk feeding bottle rubber nipple. is for calf bottle nipple, replacement calf feeder nipple. A replacement rubber nipple intended for use with a compatible calf milk-feeding bottle. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P039",
@@ -977,7 +1551,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "An eight-litre calf-feeding bucket equipped with five nipples, designed to offer milk or milk replacer to multiple calves.",
+      "how_to_use_overview": "Control individual intake where possible and thoroughly clean nipples, lines and bucket after feeding.",
+      "key_limitations_and_safety": "Shared feeding equipment creates cross-contamination risk if hygiene is poor.",
+      "farmer_friendly_description": "Calf Milk Feeding Bucket, 5 Nipples and 8 LTR capacity. is for feeding multiple calves, calf feeding bucket. An eight-litre calf-feeding bucket equipped with five nipples, designed to offer milk or milk replacer to multiple calves. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P040",
@@ -1001,7 +1590,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A temporary anti-kick restraint accessory designed to reduce handler injury risk during specific cattle procedures such as milking.",
+      "how_to_use_overview": "Use only with correct fitting, trained handling and consideration of the cause of kicking.",
+      "key_limitations_and_safety": "It must not be used to hide painful conditions or as prolonged restraint.",
+      "farmer_friendly_description": "Anti kick bar is for cow kicking during milking, milking safety. A temporary anti-kick restraint accessory designed to reduce handler injury risk during specific cattle procedures such as milking. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P041",
@@ -1026,7 +1630,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 17 mm rubber flooring mat designed to offer a resilient standing or resting surface for cattle within suitably maintained housing.",
+      "how_to_use_overview": "Install on a suitable base with drainage and inspect regularly for slip hazards, waste buildup and damage.",
+      "key_limitations_and_safety": "Thickness alone does not establish anti-slip rating or animal-health outcome.",
+      "farmer_friendly_description": "Rubber Mat for Cows 17 mm is for cow comfort, flooring. A 17 mm rubber flooring mat designed to offer a resilient standing or resting surface for cattle within suitably maintained housing. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P042",
@@ -1050,7 +1669,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "An interlocking-format rubber mat for dairy housing areas, designed to form a joined comfort-flooring surface.",
+      "how_to_use_overview": "Fit and maintain the mat system to prevent lifted edges, slipping and trapped manure.",
+      "key_limitations_and_safety": "Actual dimensions, thickness and interlock geometry require the product listing.",
+      "farmer_friendly_description": "Rubber Mat for Cows Interlocked is for cow comfort, flooring. An interlocking-format rubber mat for dairy housing areas, designed to form a joined comfort-flooring surface. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P043",
@@ -1074,7 +1708,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A cattle drinking bowl intended to support convenient access to clean drinking water in farm housing.",
+      "how_to_use_overview": "Install at an appropriate height, provide adequate water flow and clean regularly.",
+      "key_limitations_and_safety": "Automatic operation and material composition are not confirmed for this generic model.",
+      "farmer_friendly_description": "Drinking bowl. is for cow drinking bowl, water access. A cattle drinking bowl intended to support convenient access to clean drinking water in farm housing. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P044",
@@ -1097,7 +1746,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A green plastic automatic cattle drinking bowl marketed as an impact-resistant water dispenser for dairy housing.",
+      "how_to_use_overview": "Connect to a suitable supply, verify the valve and clean the bowl regularly.",
+      "key_limitations_and_safety": "“Unbreakable” is a listing description rather than a verified durability guarantee.",
+      "farmer_friendly_description": "Plastic unbreakable automatic cow drinking water bowl dispenser, green. is for automatic cow water bowl, water access. A green plastic automatic cattle drinking bowl marketed as an impact-resistant water dispenser for dairy housing. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P045",
@@ -1120,7 +1784,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A stainless-steel water bowl for cattle housing, intended to provide a washable drinking point with a durable metal surface.",
+      "how_to_use_overview": "Check mounting, flow and cleanliness and prevent sharp-edge or corrosion problems.",
+      "key_limitations_and_safety": "Steel grade and whether the unit has an automatic valve are not established.",
+      "farmer_friendly_description": "Stainless Steel water bowl. is for stainless cow water bowl, water access. A stainless-steel water bowl for cattle housing, intended to provide a washable drinking point with a durable metal surface. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P046",
@@ -1144,7 +1823,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A pack of ten RFID ear tags intended to provide individual animal identifiers that can be associated with herd-management records.",
+      "how_to_use_overview": "Confirm reader compatibility, fit with a suitable applicator and link each tag ID to the correct animal record.",
+      "key_limitations_and_safety": "Frequency, protocol, read range and animal-registration compliance must be checked.",
+      "farmer_friendly_description": "RFID Eartags Pack of 10 is for RFID cattle identification, cow ID. A pack of ten RFID ear tags intended to provide individual animal identifiers that can be associated with herd-management records. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P047",
@@ -1168,7 +1862,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "An RFID reader intended to capture compatible cattle ear-tag IDs for individual identification and digital herd records.",
+      "how_to_use_overview": "Check the tag protocol and interface supported by the actual reader and verify each scan against the correct animal.",
+      "key_limitations_and_safety": "Do not assume Bluetooth, FDX-B support or compatibility with every tag without specifications.",
+      "farmer_friendly_description": "RFID Reader is for read RFID tags, cattle identification. An RFID reader intended to capture compatible cattle ear-tag IDs for individual identification and digital herd records. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P048",
@@ -1192,7 +1901,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A flexible-tip digital veterinary thermometer for measuring body temperature as part of animal-health observations.",
+      "how_to_use_overview": "Use an appropriate veterinary temperature-measurement technique and clean between animals.",
+      "key_limitations_and_safety": "A temperature reading alone cannot establish a disease diagnosis.",
+      "farmer_friendly_description": "Digital veterinary thermometer with flexible tip-pet health monitoring. is for cow temperature, fever check. A flexible-tip digital veterinary thermometer for measuring body temperature as part of animal-health observations. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P049",
@@ -1216,7 +1940,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A hoof knife intended for trained trimming and hoof-care work in livestock, including examination of overgrown or damaged hoof material.",
+      "how_to_use_overview": "Use safe restraint, proper technique and hygienic sharp tools; refer deep lesions or severe lameness to a professional.",
+      "key_limitations_and_safety": "Incorrect trimming can cause substantial pain and injury.",
+      "farmer_friendly_description": "Hoof knife for cow, horse and goat. is for hoof trimming, hoof lesion inspection. A hoof knife intended for trained trimming and hoof-care work in livestock, including examination of overgrown or damaged hoof material. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P050",
@@ -1240,7 +1979,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A medium-size horn sleeve intended as a protective cover fitted over suitably sized cattle horns.",
+      "how_to_use_overview": "Check fit and animal comfort, and inspect for rubbing or displacement.",
+      "key_limitations_and_safety": "It does not eliminate risk from aggressive handling or horn strikes.",
+      "farmer_friendly_description": "Horn Sleeve – Medium is for horn cover, horn protection. A medium-size horn sleeve intended as a protective cover fitted over suitably sized cattle horns. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P051",
@@ -1263,7 +2017,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A small-size horn sleeve intended as a protective cover for smaller cattle horns.",
+      "how_to_use_overview": "Choose the correct size and monitor the cover for looseness or pressure marks.",
+      "key_limitations_and_safety": "Sizing dimensions and horn-shape compatibility require confirmation.",
+      "farmer_friendly_description": "Horn Sleeve – Small is for horn cover, small horn protection. A small-size horn sleeve intended as a protective cover for smaller cattle horns. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P052",
@@ -1286,7 +2055,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A three-gram chemical dehorning-paste product listed for calf horn-bud management, a procedure requiring strict animal-welfare safeguards.",
+      "how_to_use_overview": "Use only when the product is legally appropriate and under qualified professional direction with analgesia and age limits.",
+      "key_limitations_and_safety": "Caustic dehorning products can cause serious burns; do not provide unsupervised application steps.",
+      "farmer_friendly_description": "Off -Horn(Dehorning Paste) 3 Grams. is for dehorning calf, horn bud management. A three-gram chemical dehorning-paste product listed for calf horn-bud management, a procedure requiring strict animal-welfare safeguards. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P053",
@@ -1310,7 +2094,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A Dairy Flow 200 milking-machine model intended to mechanise milk extraction from dairy cattle.",
+      "how_to_use_overview": "Confirm system configuration, vacuum settings, pulsation and cleaning routine with the supplier before commissioning.",
+      "key_limitations_and_safety": "Milk throughput, bucket capacity and motor specifications are not confirmed here.",
+      "farmer_friendly_description": "Milking Machine Dairy Flow 200 is for milking machine, machine milking. A Dairy Flow 200 milking-machine model intended to mechanise milk extraction from dairy cattle. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P054",
@@ -1333,7 +2132,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "An Ecomilk 150BS milking-machine model offered for dairy-cattle machine milking operations.",
+      "how_to_use_overview": "Train operators in attachment, detachment, cleaning, servicing and udder-hygiene procedures.",
+      "key_limitations_and_safety": "Model name does not establish vacuum level, productivity or number of milking points.",
+      "farmer_friendly_description": "Milking Machine Ecomilk 150BS is for milking machine, small dairy milking. An Ecomilk 150BS milking-machine model offered for dairy-cattle machine milking operations. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P055",
@@ -1356,7 +2170,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A Nano milk 150 BS milking-machine model intended for mechanised dairy milking where a compatible setup is installed.",
+      "how_to_use_overview": "Check electrical supply, vacuum, pulsation, liner condition and sanitation against the machine manual.",
+      "key_limitations_and_safety": "Portability, motor power and exact capacity require source specifications.",
+      "farmer_friendly_description": "Milking Machine Nano milk 150 BS is for milking machine, portable dairy milking. A Nano milk 150 BS milking-machine model intended for mechanised dairy milking where a compatible setup is installed. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P056",
@@ -1380,7 +2209,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A replacement milking-machine liner that contacts the teat inside a compatible teat cup during pulsating machine milking.",
+      "how_to_use_overview": "Match liner dimensions and material to the milking unit and replace on the manufacturer’s service schedule.",
+      "key_limitations_and_safety": "Worn or incorrectly fitted liners can compromise teat health and milking efficiency.",
+      "farmer_friendly_description": "Liner for milking machine. is for milking liner replacement, teat cup liner. A replacement milking-machine liner that contacts the teat inside a compatible teat cup during pulsating machine milking. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P057",
@@ -1404,7 +2248,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A 60:40-ratio pulsator component intended to control the alternating vacuum and massage phases of a compatible milking machine.",
+      "how_to_use_overview": "Confirm the required pulsation ratio, rate and connection compatibility before installation and test operation afterwards.",
+      "key_limitations_and_safety": "The 60:40 designation does not establish pulsations-per-minute or fit for every machine.",
+      "farmer_friendly_description": "Pulsator 60-40. is for milking machine pulsator, pulsation repair. A 60:40-ratio pulsator component intended to control the alternating vacuum and massage phases of a compatible milking machine. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P058",
@@ -1427,7 +2286,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A repair-kit set intended for servicing a compatible milking-machine pulsator and restoring its normal mechanical function.",
+      "how_to_use_overview": "Use the correct kit for the pulsator model and verify pulsation after repair.",
+      "key_limitations_and_safety": "Individual replacement parts and fitment are not identified in the source.",
+      "farmer_friendly_description": "Pulsator repair kit. is for repair pulsator, milking machine maintenance. A repair-kit set intended for servicing a compatible milking-machine pulsator and restoring its normal mechanical function. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P059",
@@ -1450,7 +2324,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A vacuum regulator used in a compatible milking setup to help maintain the desired vacuum during machine operation.",
+      "how_to_use_overview": "Install and adjust according to the system manual using proper measurement and professional servicing.",
+      "key_limitations_and_safety": "An incorrect setting can damage teat health or impair milk removal.",
+      "farmer_friendly_description": "Vaccum Regulator is for milking vacuum regulation, milking machine vacuum. A vacuum regulator used in a compatible milking setup to help maintain the desired vacuum during machine operation. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P060",
@@ -1473,7 +2362,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test rapid antibody kit intended to screen cattle for antibodies relevant to foot-and-mouth disease (FMD) within the assay’s validated sample type.",
+      "how_to_use_overview": "Interpret antibody findings with vaccination history, clinical status and official veterinary guidance.",
+      "key_limitations_and_safety": "An antibody result alone is not proof of active FMD infection or clearance.",
+      "farmer_friendly_description": "Bovine Foot and Mouth Disease Antibody Rapid Test Kit 1 Test is for FMD antibody test, foot and mouth disease testing. A one-test rapid antibody kit intended to screen cattle for antibodies relevant to foot-and-mouth disease (FMD) within the assay’s validated sample type. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P061",
@@ -1496,7 +2400,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine Brucella antibody rapid kit used as a screening aid for evidence of an antibody response to Brucella organisms.",
+      "how_to_use_overview": "Follow biosafety procedures and refer suspected positives to official confirmatory testing and veterinary authorities.",
+      "key_limitations_and_safety": "Brucellosis is zoonotic; a single rapid antibody result is not a definitive diagnosis.",
+      "farmer_friendly_description": "Bovine Brucella Antibody Rapid Test Kit 1 Test is for brucellosis test, Brucella antibody test. A one-test bovine Brucella antibody rapid kit used as a screening aid for evidence of an antibody response to Brucella organisms. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P062",
@@ -1519,7 +2438,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test milk-sample rapid strip intended to screen bovine milk for Brucella-associated antibodies within the stated assay protocol.",
+      "how_to_use_overview": "Use only the authorised milk sample type and follow confirmatory pathways for reactive findings.",
+      "key_limitations_and_safety": "Milk antibody screening is not equivalent to organism identification or a herd-free certification.",
+      "farmer_friendly_description": "Bovine Brucella Milk Antibody Rapid Test Strip 1 Test is for Brucella milk antibody test, brucellosis milk screening. A one-test milk-sample rapid strip intended to screen bovine milk for Brucella-associated antibodies within the stated assay protocol. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P063",
@@ -1543,7 +2477,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A bovine Theileria Ta/To antibody rapid test kit intended to support investigation of exposure to specified Theileria targets.",
+      "how_to_use_overview": "Interpret alongside tick exposure, fever, blood findings and veterinarian-selected confirmatory tests.",
+      "key_limitations_and_safety": "Antibodies may not distinguish active infection from previous exposure; verify antigen coverage in insert.",
+      "farmer_friendly_description": "Bovine Theileria Ta/To Antibody Rapid Test Kit is for theileria test, tick fever test. A bovine Theileria Ta/To antibody rapid test kit intended to support investigation of exposure to specified Theileria targets. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P064",
@@ -1566,7 +2515,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine tuberculosis antibody rapid screening kit positioned to detect immune responses associated with bovine tuberculosis.",
+      "how_to_use_overview": "Use only as an adjunct under the applicable veterinary disease-surveillance and official testing protocol.",
+      "key_limitations_and_safety": "Do not substitute this antibody strip for mandated tuberculin or other approved confirmation.",
+      "farmer_friendly_description": "Bovine Tuberculosis Antibody Rapid Test Kit 1 Test is for bovine TB test, tuberculosis screening. A one-test bovine tuberculosis antibody rapid screening kit positioned to detect immune responses associated with bovine tuberculosis. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P065",
@@ -1589,7 +2553,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine anthrax antibody rapid kit listed for specialised veterinary investigation where anthrax exposure is suspected.",
+      "how_to_use_overview": "Do not open or handle a suspected anthrax carcass; isolate the area and contact veterinary authorities immediately.",
+      "key_limitations_and_safety": "This antibody product cannot safely rule out anthrax or replace urgent official diagnosis.",
+      "farmer_friendly_description": "Bovine Anthrax Antibody Rapid Test Kit 1 Test is for anthrax test, anthrax antibody screening. A one-test bovine anthrax antibody rapid kit listed for specialised veterinary investigation where anthrax exposure is suspected. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P066",
@@ -1612,7 +2591,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine haemorrhagic septicaemia antibody rapid kit for screening antibody responses associated with the named disease.",
+      "how_to_use_overview": "Consider vaccination records and use veterinarian-guided assessment and appropriate confirmatory testing.",
+      "key_limitations_and_safety": "Antibody status does not alone prove current infection or protection.",
+      "farmer_friendly_description": "Bovine Hemorrhagic Septicemia Antibody Rapid Test Kit 1 Test is for hemorrhagic septicemia test, HS antibody test. A one-test bovine haemorrhagic septicaemia antibody rapid kit for screening antibody responses associated with the named disease. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P067",
@@ -1635,7 +2629,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine infectious bovine rhinotracheitis (IBR) antibody rapid kit to support screening for antibodies associated with bovine herpesvirus-1.",
+      "how_to_use_overview": "Interpret with vaccination status, biosecurity records and the authorised testing programme.",
+      "key_limitations_and_safety": "Antibody positivity is not synonymous with active shedding or a clinical IBR diagnosis.",
+      "farmer_friendly_description": "Bovine IBR Antibody Rapid Test Kit 1 Test is for IBR test, infectious bovine rhinotracheitis antibody. A one-test bovine infectious bovine rhinotracheitis (IBR) antibody rapid kit to support screening for antibodies associated with bovine herpesvirus-1. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P068",
@@ -1658,7 +2667,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine Leptospira IgG/IgM rapid antibody kit intended as a screening aid for immune responses associated with leptospiral infection.",
+      "how_to_use_overview": "Use protective handling, consider reproductive and systemic signs, and obtain veterinary interpretation and confirmation.",
+      "key_limitations_and_safety": "Leptospirosis can infect humans; IgG/IgM status alone cannot definitively stage infection.",
+      "farmer_friendly_description": "Bovine Leptospira IgG/IgM Antibody Rapid Test Kit 1 Test is for leptospirosis test, Leptospira antibody. A one-test bovine Leptospira IgG/IgM rapid antibody kit intended as a screening aid for immune responses associated with leptospiral infection. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P069",
@@ -1681,7 +2705,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A one-test bovine Salmonella antibody rapid kit intended to assist investigations of Salmonella-related immune responses.",
+      "how_to_use_overview": "Use veterinarian-directed interpretation and appropriate sample-based follow-up, especially during diarrhoeal outbreaks.",
+      "key_limitations_and_safety": "Antibodies alone do not identify active shedding or the infecting Salmonella serotype.",
+      "farmer_friendly_description": "Bovine Salmonella Antibody Rapid Test Kit 1 Test is for Salmonella test, salmonellosis antibody. A one-test bovine Salmonella antibody rapid kit intended to assist investigations of Salmonella-related immune responses. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P070",
@@ -1705,7 +2744,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A Dairy Cutter 1.5 chaff-cutter model designed to chop fodder into more manageable lengths for dairy-cattle feeding operations.",
+      "how_to_use_overview": "Use fitted guards, suitable feed materials and manufacturer-specified operating and maintenance procedures.",
+      "key_limitations_and_safety": "Motor rating, cutting length and throughput require the product datasheet.",
+      "farmer_friendly_description": "Chaff Cutter Dairy Cutter 1.5 is for cut fodder, chaff cutting. A Dairy Cutter 1.5 chaff-cutter model designed to chop fodder into more manageable lengths for dairy-cattle feeding operations. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P071",
@@ -1729,7 +2783,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A FARM PRO 200 chaff-cutter model designed for chopping farm fodder as part of feed-preparation workflows.",
+      "how_to_use_overview": "Train operators and keep hands, clothing and loose objects away from moving feed and cutting parts.",
+      "key_limitations_and_safety": "Do not infer hourly capacity or energy consumption from the model name.",
+      "farmer_friendly_description": "Chaff Cutter FARM PRO 200 is for cut fodder, chaff cutting. A FARM PRO 200 chaff-cutter model designed for chopping farm fodder as part of feed-preparation workflows. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P072",
@@ -1753,7 +2822,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A cream-separation machine rated in its product name at 100 litres per hour with a 0.5 HP motor, intended to separate cream from milk.",
+      "how_to_use_overview": "Follow the machine’s milk-temperature, assembly, cleaning and safe operation instructions.",
+      "key_limitations_and_safety": "Rated throughput may differ from practical throughput under farm conditions.",
+      "farmer_friendly_description": "Cream Separator Machine – 100 LPH (0.5 HP) is for cream separation, milk processing. A cream-separation machine rated in its product name at 100 litres per hour with a 0.5 HP motor, intended to separate cream from milk. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P073",
@@ -1777,7 +2861,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A cream-separation machine rated in its product name at 165 litres per hour with a 1 HP motor, intended for higher-volume milk-to-cream separation.",
+      "how_to_use_overview": "Use suitable milk preparation, balance and hygiene routines and service the rotating assembly as instructed.",
+      "key_limitations_and_safety": "Do not guarantee a particular cream fat percentage or recovery efficiency.",
+      "farmer_friendly_description": "Cream Separator Machine – 165 LPH (1 HP) is for cream separation, milk processing. A cream-separation machine rated in its product name at 165 litres per hour with a 1 HP motor, intended for higher-volume milk-to-cream separation. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P074",
@@ -1801,7 +2900,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A light cleaning-brush set intended to assist manual cleaning of compatible dairy equipment, fittings or utensils.",
+      "how_to_use_overview": "Select appropriate brushes for the surface and combine with recommended detergent, rinsing and sanitising routines.",
+      "key_limitations_and_safety": "Brush dimensions, number of pieces and included accessories are not specified.",
+      "farmer_friendly_description": "Cleaning brush set (Lite). is for equipment cleaning, farm hygiene. A light cleaning-brush set intended to assist manual cleaning of compatible dairy equipment, fittings or utensils. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     },
     {
       "product_id": "P075",
@@ -1825,7 +2939,22 @@
         "verified_listed_on": "2026-10-07"
       },
       "price_policy": "Fetch live price from store; do not rely on the RAG file for current price.",
-      "availability_policy": "Fetch live availability from store before claiming it is in stock."
+      "availability_policy": "Fetch live availability from store before claiming it is in stock.",
+      "description_detailed": "A single dip cup intended for applying suitable teat-hygiene products during dairy pre- or post-milking routines.",
+      "how_to_use_overview": "Use a compatible approved teat dip, ensure correct application and clean or replace contaminated solution and equipment as directed.",
+      "key_limitations_and_safety": "The cup alone is not a disinfectant; solution compatibility and cup design require confirmation.",
+      "farmer_friendly_description": "Dip Cup 1 unit is for teat dip cup, pre dip. A single dip cup intended for applying suitable teat-hygiene products during dairy pre- or post-milking routines. Follow the product label or trained veterinary guidance; do not use it as a substitute for diagnosis when an animal is sick.",
+      "information_status": {
+        "description_type": "expanded from the supplied catalog role/name/use cases plus cautious general domain context",
+        "verified_product_specific_specs": false,
+        "needs_label_verification": [
+          "active ingredients or materials (where applicable)",
+          "exact directions and dosage",
+          "validated performance claims",
+          "compatibility or technical specifications",
+          "current price and stock"
+        ]
+      }
     }
   ],
   "recommendation_scenarios": [
@@ -3413,5 +4542,10 @@
         "P074"
       ]
     }
-  ]
+  ],
+  "enrichment": {
+    "date": "2026-10-24",
+    "scope": "75 catalog products; all original recommendation scenarios and indexes retained",
+    "note": "Expanded educational descriptions are not independently validated manufacturer specifications. Do not use as proof of clinical efficacy, composition, dose, technical compatibility or performance."
+  }
 }

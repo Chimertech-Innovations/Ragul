@@ -21,17 +21,47 @@ export class AudioController {
   private onSilenceEndCallback: (() => void) | null = null;
   private onSpeechEndCallback: (() => void) | null = null;
   private onNoiseAlertCallback: ((msg: string) => void) | null = null;
+  private onVadStatusCallback: ((status: string) => void) | null = null;
   
   public isSynthesizing = false;
   public isListening = false;
+  public isSpeakingDetected = false;
   private speechStartTime = 0;
   private lastClapTime = 0;
   private lastNoiseAlertTime = 0;
   private highNoiseCounter = 0;
+  private voiceInterruptionFrames = 0;
   private lastSentTranscript = '';
   private lastTranscriptTime = 0;
   private accumulatedSpeech = '';
   private speechDebounceTimer: any = null;
+  private activeUtterance: SpeechSynthesisUtterance | null = null;
+  private speechKeepAliveTimer: any = null;
+
+  public cleanTextForSpeech(text: string): string {
+    if (!text) return '';
+    return text
+      // 1. Strip ALL emojis & pictorial symbols (Unicode Extended Pictographic, emoticons, symbols)
+      .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '')
+      // 2. Remove markdown asterisks, hashes, backticks
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s*/g, '')
+      .replace(/`{1,3}[\s\S]*?`{1,3}/g, '')
+      // 3. Remove bullet characters & arrows
+      .replace(/[•▸►▪■]/g, '')
+      .replace(/[-_]{3,}/g, '')
+      // 4. Clean Markdown links [Title](url) -> Title, and strip raw URLs
+      .replace(/\[(.*?)\]\([^)]*\)/g, '$1')
+      .replace(/\(https?:\/\/[^)]*\)/gi, '')
+      .replace(/https?:\/\/\S+/gi, '')
+      // 5. Remove camera snapshot notices
+      .replace(/📸\s*\*.*?\*/gi, '')
+      // 6. Clean spacing and line breaks
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n+/g, '. ')
+      .trim();
+  }
 
 
   private cachedVoices: SpeechSynthesisVoice[] = [];
@@ -115,8 +145,12 @@ export class AudioController {
 
   private normalizeDairyPhonetics(text: string): string {
     let cleaned = text;
-    // Mastitis phonetic corrections
-    cleaned = cleaned.replace(/\b(mercedes|masturitis|mass\s*status|masstatis|mastites|mustitis|masteritis|master\s*status|match\s*today)\b/gi, 'mastitis');
+    // Common acoustic mishearings
+    cleaned = cleaned.replace(/\bmeaning\s*[yb]\b/gi, 'meaning of');
+    // Mastitis phonetic corrections ("my statis", "my status", "mass titis", "mustard is", "master this")
+    cleaned = cleaned.replace(/\b(my\s*statis|my\s*status|my\s*static|my\s*titis|mystatis|mystatus|mystatic|mass\s*status|mass\s*titis|masstatis|mastites|mustitis|must\s*titis|masteritis|master\s*status|master\s*this|mustard\s*is|mercedes|masturitis|masturitise|match\s*today|masturi\w*|masteri\w*|mastiti\w*|mastur\w*)\b/gi, 'mastitis');
+    // Quadmastest & CMT screening device corrections
+    cleaned = cleaned.replace(/\b(quad\s*master|quad\s*mast\s*test|quad\s*my\s*test|god\s*master|card\s*master|court\s*master|quad\s*test)\b/gi, 'quadmastest');
     // Farm phonetic corrections
     cleaned = cleaned.replace(/\b(in the form|the form|in form)\b/gi, 'in the farm');
     cleaned = cleaned.replace(/\bform\b/gi, 'farm');
@@ -125,7 +159,10 @@ export class AudioController {
     // Ragul name corrections
     cleaned = cleaned.replace(/\b(rahul|ravel|raghav|raghul)\b/gi, 'ragul');
     // Estrus & Heat corrections
-    cleaned = cleaned.replace(/\b(extra|is\s*trust|s\s*trust)\b/gi, 'estrus');
+    cleaned = cleaned.replace(/\b(extra|is\s*trust|s\s*trust|east\s*rus|es\s*truss|is\s*trust|s\s*trus|s\s*stress)\b/gi, 'estrus');
+    // Silage & Fodder corrections
+    cleaned = cleaned.replace(/\b(sai\s*lage|cy\s*lage|sil\s*age)\b/gi, 'silage');
+    cleaned = cleaned.replace(/\b(father\s*grass|father\s*crop|further\s*grass)\b/gi, 'fodder grass');
     return cleaned;
   }
 
@@ -140,14 +177,20 @@ export class AudioController {
         this.recognition.lang = 'en-IN';
 
         this.recognition.onresult = (event: any) => {
-          // STRICT ECHO ISOLATION: Discard everything if speaker is talking or just finished
-          if (this.isSynthesizing) {
-            console.log('[AudioController] Discarded speaker audio loop from microphone');
-            return;
-          }
-
           const lastResultIndex = event.results.length - 1;
           const rawTranscript = event.results[lastResultIndex][0].transcript.trim();
+          if (!rawTranscript) return;
+
+          // INSTANT BARGE-IN INTERRUPTION: If user speaks during AI playback, immediately halt Ragul's voice!
+          if (this.isSynthesizing) {
+            console.log('[AudioController] User voice query detected during AI speech! Cutting off AI immediately:', rawTranscript);
+            this.stopSpeaking();
+            if (this.onInterruptionCallback) {
+              this.onInterruptionCallback();
+            }
+            this.accumulatedSpeech = '';
+          }
+
           const transcript = this.normalizeDairyPhonetics(rawTranscript);
 
           const GHOST_HALLUCINATIONS = [
@@ -180,9 +223,10 @@ export class AudioController {
             return;
           }
 
-          // Filter out isolated single filler sounds/noise
-          const NOISE_FILLERS = new Set(["um", "uh", "ah", "eh", "er", "mm", "hmm", "shh"]);
-          if (NOISE_FILLERS.has(lower) || transcript.length < 2) {
+          // Filter out isolated single filler sounds/noise and ambient mic pops
+          const NOISE_FILLERS = new Set(["um", "uh", "ah", "eh", "er", "mm", "hmm", "shh", "huh", "oh", "ha"]);
+          const cleanChars = transcript.replace(/[^a-zA-Z0-9\u0B80-\u0BFF\u0900-\u097F]/g, '');
+          if (NOISE_FILLERS.has(lower) || cleanChars.length < 3) {
             console.log('[AudioController] Discarded ambient filler noise:', transcript);
             return;
           }
@@ -208,12 +252,15 @@ export class AudioController {
             
             if (finalQuery && finalQuery.length > 1) {
               const now = Date.now();
-              // Prevent firing if this exact query or a subset was dispatched in the last 2.5s
-              if (
-                this.lastSentTranscript &&
-                (this.lastSentTranscript === finalQuery || this.lastSentTranscript.includes(finalQuery)) &&
-                now - this.lastTranscriptTime < 2500
-              ) {
+              const cleanFinal = finalQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const cleanLast = this.lastSentTranscript.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const isDuplicate = cleanLast && (
+                cleanLast === cleanFinal ||
+                (cleanLast.length > 5 && cleanFinal.length > 5 && (cleanLast.includes(cleanFinal) || cleanFinal.includes(cleanLast)))
+              );
+
+              // Prevent firing if this exact query or an overlapping subset was dispatched in the last 5.5s
+              if (isDuplicate && (now - this.lastTranscriptTime < 5500)) {
                 console.log('[AudioController] Suppressing duplicate speech dispatch:', finalQuery);
                 return;
               }
@@ -240,15 +287,15 @@ export class AudioController {
         };
 
         this.recognition.onend = () => {
-          // Restart recognition if listening is active and assistant is NOT speaking
-          if (this.isListening && !this.isSynthesizing) {
+          // Continuous Duplex Speech: Keep recognition alive whenever listening is active (even during synthesis for instant barge-in!)
+          if (this.isListening) {
             setTimeout(() => {
-              if (this.isListening && !this.isSynthesizing) {
+              if (this.isListening) {
                 try {
                   this.recognition.start();
                 } catch (e) {}
               }
-            }, 100);
+            }, 120);
           }
         };
       } catch (err) {
@@ -265,6 +312,7 @@ export class AudioController {
     onSilenceEnd?: () => void;
     onSpeechEnd?: () => void;
     onNoiseAlert?: (msg: string) => void;
+    onVadStatus?: (status: string) => void;
   }) {
     this.onInterruptionCallback = callbacks.onInterruption;
     this.onTranscriptCallback = callbacks.onTranscript;
@@ -273,6 +321,7 @@ export class AudioController {
     this.onSilenceEndCallback = callbacks.onSilenceEnd || null;
     this.onSpeechEndCallback = callbacks.onSpeechEnd || null;
     this.onNoiseAlertCallback = callbacks.onNoiseAlert || null;
+    this.onVadStatusCallback = callbacks.onVadStatus || null;
   }
 
   public async startStreaming(sessionId?: string): Promise<void> {
@@ -331,21 +380,35 @@ export class AudioController {
         console.log('[AudioController] WebSocket connected to /ws/audio with session:', sessionId);
       };
 
+      this.socket.onerror = (e) => {
+        // Quietly absorb socket errors
+        console.warn('[AudioController] WebSocket notice:', e);
+      };
+
+      this.socket.onclose = () => {
+        this.isSpeakingDetected = false;
+        if (this.onVadStatusCallback) {
+          this.onVadStatusCallback('idle');
+        }
+      };
+
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
-          if (data.type === 'interrupt') {
-            // Guard: Only allow intentional barge-in after initial speech period (> 2000ms)
-            // to completely prevent speaker echo from falsely aborting the assistant's introduction
-            if (this.isSynthesizing && (Date.now() - this.speechStartTime > 2000)) {
-              console.log('[AudioController] Valid User Barge-in! Halting AI speech.');
+          if (data.type === 'vad_status') {
+            this.isSpeakingDetected = (data.status === 'speech');
+            if (this.onVadStatusCallback) {
+              this.onVadStatusCallback(data.status);
+            }
+          } else if (data.type === 'interrupt') {
+            // Guard: Allow intentional barge-in after 300ms of speech
+            if (this.isSynthesizing && (Date.now() - this.speechStartTime > 300)) {
+              console.log('[AudioController] Valid User Barge-in from backend! Halting AI speech.');
               this.stopSpeaking();
               if (this.onInterruptionCallback) {
                 this.onInterruptionCallback();
               }
-            } else {
-              console.log('[AudioController] Filtered speaker feedback interrupt echo');
             }
           } else if (data.type === 'user_transcript') {
             // STRICT SINGLE SOURCE OF TRUTH: Only use backend WS transcript if browser SpeechRecognition is not supported
@@ -362,7 +425,6 @@ export class AudioController {
               }
             }
           }
-
 
         } catch (e) {
           console.error('[AudioController] Error parsing WS message:', e);
@@ -413,11 +475,34 @@ export class AudioController {
           }
         }
 
-        // STRICT ECHO PREVENTION: Do NOT stream microphone audio to VAD while assistant is speaking!
-        // This prevents the assistant's own speaker output from triggering false barge-in interruptions.
-        if (this.isSynthesizing) return;
+        // Acoustic Voice Activity Barge-In:
+        // Reject ambient noise and room echo; require real vocal presence (rms > 0.14 for 3 consecutive frames)
+        if (this.isSynthesizing) {
+          const now = Date.now();
+          if (now - this.speechStartTime > 400 && rms > 0.14) {
+            this.voiceInterruptionFrames = (this.voiceInterruptionFrames || 0) + 1;
+            if (this.voiceInterruptionFrames >= 3) {
+              console.log('[AudioController] Loud user voice confirmed during playback. Halting speech synthesis.');
+              this.voiceInterruptionFrames = 0;
+              this.stopSpeaking();
+              if (this.onInterruptionCallback) {
+                this.onInterruptionCallback();
+              }
+            }
+          } else {
+            this.voiceInterruptionFrames = 0;
+          }
+          return;
+        }
 
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+
+        // Front-end Noise Gate:
+        // Do not flood WebSocket with low-energy background mic hiss / room silence (rms < 0.012)
+        // unless active speech is underway
+        if (rms < 0.012 && !this.isSpeakingDetected) {
+          return;
+        }
 
         const pcm16 = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
@@ -490,6 +575,10 @@ export class AudioController {
 
     if (this.socket) {
       try {
+        this.socket.onopen = null;
+        this.socket.onmessage = null;
+        this.socket.onerror = null;
+        this.socket.onclose = null;
         if (this.socket.readyState === WebSocket.OPEN) {
           this.socket.close(1000, 'User stopped streaming');
         }
@@ -499,7 +588,16 @@ export class AudioController {
   }
 
   public stopSpeaking(): void {
-    if (window.speechSynthesis) {
+    if (this.speechKeepAliveTimer) {
+      clearInterval(this.speechKeepAliveTimer);
+      this.speechKeepAliveTimer = null;
+    }
+    if (this.activeUtterance) {
+      this.activeUtterance.onend = null;
+      this.activeUtterance.onerror = null;
+      this.activeUtterance = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     this.isSynthesizing = false;
@@ -518,24 +616,24 @@ export class AudioController {
       } catch (e) {}
     }
 
-    // Abort speech recognition so it cannot hear the speaker output
-    if (this.recognition) {
-      try {
-        this.recognition.abort();
-      } catch (e) {}
+    // Clean text: strip emojis, markdown, URLs, and symbols so voice is 100% natural
+    const cleanText = this.cleanTextForSpeech(text);
+    if (!cleanText) {
+      this.isSynthesizing = false;
+      return;
     }
 
-    // Clean text: strip markdown asterisks and bullet symbols
-    const cleanText = text
-      .replace(/\*\*/g, '')
-      .replace(/\*/g, '')
-      .replace(/#/g, '')
-      .replace(/\[.*?\]\(.*?\)/g, '')
-      .trim();
+    // Keep speech recognition armed so the user can interrupt Ragul at any moment
+    if (this.recognition && this.isListening) {
+      try {
+        this.recognition.start();
+      } catch (e) {}
+    }
 
     const doSpeak = () => {
       this.speechStartTime = Date.now();
       const utterance = new SpeechSynthesisUtterance(cleanText);
+      this.activeUtterance = utterance;
       utterance.lang = lang;
 
       const maleVoice = this.getStrictMaleVoice();
@@ -551,7 +649,28 @@ export class AudioController {
       utterance.pitch = 0.72; // Deep resonant male pitch
       utterance.rate = 1.0;
 
+      // Chrome SpeechSynthesis keep-alive watchdog (prevents Chrome from silently cutting off speech > 15s)
+      if (this.speechKeepAliveTimer) {
+        clearInterval(this.speechKeepAliveTimer);
+      }
+      this.speechKeepAliveTimer = setInterval(() => {
+        if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+          if (this.speechKeepAliveTimer) {
+            clearInterval(this.speechKeepAliveTimer);
+            this.speechKeepAliveTimer = null;
+          }
+        } else {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 4500);
+
       utterance.onend = () => {
+        if (this.speechKeepAliveTimer) {
+          clearInterval(this.speechKeepAliveTimer);
+          this.speechKeepAliveTimer = null;
+        }
+        this.activeUtterance = null;
         // Safety grace period to ensure speaker echo is completely dissipated
         setTimeout(() => {
           this.isSynthesizing = false;
@@ -563,21 +682,31 @@ export class AudioController {
               this.recognition.start();
             } catch (e) {}
           }
-        }, 400);
+        }, 300);
       };
 
-      utterance.onerror = () => {
+      utterance.onerror = (e: any) => {
+        if (this.speechKeepAliveTimer) {
+          clearInterval(this.speechKeepAliveTimer);
+          this.speechKeepAliveTimer = null;
+        }
+        this.activeUtterance = null;
+        this.isSynthesizing = false;
+        // If canceled by user interruption, do NOT trigger onSpeechEndCallback
+        if (e && (e.error === 'canceled' || e.error === 'interrupted')) {
+          console.log('[AudioController] Speech playback canceled by user barge-in.');
+          return;
+        }
         setTimeout(() => {
-          this.isSynthesizing = false;
           if (this.onSpeechEndCallback) {
             this.onSpeechEndCallback();
           }
           if (this.isListening && this.recognition) {
             try {
               this.recognition.start();
-            } catch (e) {}
+            } catch (err) {}
           }
-        }, 400);
+        }, 300);
       };
 
       window.speechSynthesis.speak(utterance);
