@@ -1077,6 +1077,71 @@ class AgentRouter:
             sections.append("⚠️ **Veterinary Alert:**\n• If high fever, severe pain, or rapid worsening occurs, call your veterinarian promptly.")
             return "\n".join(sections).strip()
 
+        elif tool_name == "calculate_nasem_dairy_nutrition_and_feed":
+            source = data.get("source", "NASEM 2021 Dairy Standard")
+            calc_type = data.get("calculation", "Dairy Nutrition & Feed Standard")
+            res_data = data.get("data", {})
+            cattle_id = data.get("cattle_id")
+            cid_str = f" for **{cattle_id}**" if cattle_id else ""
+
+            sections = [f"Sir, here are the authoritative **NASEM 2021** calculated results{cid_str} ({calc_type}):\n"]
+
+            if "dmi_kg_dm_day" in res_data.get("result", {}):
+                dmi_val = res_data["result"]["dmi_kg_dm_day"]
+                eq_id = res_data.get("equation_id", "NASEM_2021_EQ_2_1")
+                sections.append(
+                    f"🌾 **Dry Matter Intake Target ({eq_id}):**\n"
+                    f"• **Recommended DMI:** **{dmi_val} kg DM / day**\n"
+                    f"• **Scientific Equation:** `{eq_id}` (NASEM 2021 Chapter 2)\n"
+                    f"• **Key Inputs Used:** BW: {res_data.get('inputs', {}).get('BW_kg', 550)} kg, Milk: {res_data.get('inputs', {}).get('Milk_Yield_kg_day', 15)} kg/day, BCS: {res_data.get('inputs', {}).get('BCS', 3.0)}\n"
+                    f"• **As-Fed Conversion:** For a 45% DM ration, total as-fed feed = **~{round(dmi_val / 0.45, 1)} kg as-fed / day**."
+                )
+
+            elif "water_fwi_l_day" in res_data.get("result", {}):
+                w_val = res_data["result"]["water_fwi_l_day"]
+                eq_id = res_data.get("equation_id", "NASEM_2021_EQ_9_1")
+                sections.append(
+                    f"💧 **Free Water Intake (FWI Target - {eq_id}):**\n"
+                    f"• **Predicted Water Intake:** **{w_val} Liters / day** (ad libitum 24/7 access required)\n"
+                    f"• **Scientific Standard:** `{eq_id}` (NASEM 2021 Chapter 9, Water)\n"
+                    f"• **Ambient Temperature Factor:** {res_data.get('inputs', {}).get('mean_ambient_temp_c', 27)}°C (built into Eq 9-1/9-3; no extra 1.44 multiplier applied to prevent double-counting).\n"
+                    f"• **Management Tip:** Water must be clean, fresh, and freely available continuously."
+                )
+
+            elif "total_nel_required_mcal_day" in res_data.get("breakdown", {}):
+                bd = res_data["breakdown"]
+                sections.append(
+                    f"⚡ **Net Energy for Lactation (NEL System):**\n"
+                    f"• **Total NEL Required:** **{bd.get('total_nel_required_mcal_day')} Mcal / day**\n"
+                    f"  - Maintenance NEL: **{bd.get('nel_maintenance_mcal_day')} Mcal/day** (Eq 3-13: `0.10 * BW^0.75`)\n"
+                    f"  - Milk Synthesis NEL: **{bd.get('nel_milk_mcal_day')} Mcal/day** (Eq 3-14b/c)\n"
+                    f"  - Gestation NEL: **{bd.get('nel_gestation_mcal_day')} Mcal/day** (Eq 3-18)\n"
+                    f"• **Basis Separation:** Adult cows use NEL; heifers strictly use ME basis."
+                )
+
+            elif "calcium_ca" in res_data:
+                ca = res_data.get("calcium_ca", {})
+                p = res_data.get("phosphorus_p", {})
+                sections.append(
+                    f"🧪 **Factorial Mineral Requirements (NASEM Chapter 7):**\n"
+                    f"• **Absorbed Calcium (Ca) Required:** **{ca.get('total_absorbed_ca_required_g_day')} g / day**\n"
+                    f"  - Maintenance Absorbed Ca: {ca.get('absorbed_maintenance_g_day')} g/day (Eq 7-1: `0.90 * DMI`)\n"
+                    f"  - Milk Lactation Absorbed Ca: {ca.get('absorbed_milk_g_day')} g/day\n"
+                    f"• **Absorbed Phosphorus (P) Required:** **{p.get('total_absorbed_p_required_g_day')} g / day**\n"
+                    f"  - Maintenance P: {p.get('maintenance_g_day')} g/day (`1.0 * DMI + 0.0006 * BW`)\n"
+                    f"• **Mineral Mixture Protocol:** Never prescribe a fixed 50–130g without calculating the exact deficit from natural feed supply first."
+                )
+
+            else:
+                sections.append(
+                    f"📚 **NASEM 2021 Unified Dairy Feeding Standard Overview:**\n"
+                    f"• **Single Source of Truth:** All animal tables, herd dashboards, and reports must consume the exact same calculated result objects.\n"
+                    f"• **Joint Farm Optimization:** Optimize across groups simultaneously subject to hard inventory limits.\n"
+                    f"• **Balanced Definition:** DMI adequacy alone is NOT Balanced; all energy, protein (MP), minerals, and fiber limits must pass."
+                )
+
+            return "\n".join(sections).strip()
+
         elif tool_name == "get_workers_and_staff_data":
             farm_name = data.get("farm_name", "SAM")
             farm_code = data.get("farm_code", "FARM_MAIN")

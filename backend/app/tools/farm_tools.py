@@ -813,6 +813,128 @@ async def veterinary_and_products_rag(query: str, farm_id: Optional[str] = None)
         "clinical_advice": advice
     }
 
+async def calculate_nasem_dairy_nutrition_and_feed(
+    action: str = "query_rules",
+    query: Optional[str] = None,
+    category: str = "lactating_cow",
+    bw_kg: Optional[float] = None,
+    milk_yield_kg: Optional[float] = None,
+    fat_percent: Optional[float] = 4.0,
+    dim: Optional[int] = None,
+    bcs: Optional[float] = None,
+    parity: Optional[int] = None,
+    ambient_temp_c: Optional[float] = 27.0,
+    diet_dm_percent: Optional[float] = 45.0,
+    diet_cp_percent: Optional[float] = 16.5,
+    gestation_day: Optional[int] = None,
+    adg_kg_day: Optional[float] = 0.75,
+    cattle_id: Optional[str] = None,
+    farm_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Unified NASEM 2021 Dairy Nutrition, Feed, DMI, Water, Energy, and Mineral Calculator.
+    Standard: NASEM 2021 (8th Revised Edition), ruleset: dairy_feed_calculation_nasem2021_consistent_v1.
+    Provides single source of truth for DMI (Eq 2-1, 2-3, 12-1), Free Water Intake (FWI Eq 9-1, 9-3),
+    Net Energy of Lactation (NEL Eq 3-13, 3-14b/c, 3-18), Heifer ME (Eq 11-2, 3-20),
+    Factorial Minerals (Ca Eq 7-1, P system), and Joint Ration Optimization rules.
+    """
+    from app.knowledge.nasem_calculator import nasem_calculator
+    f_id = await _resolve_farm_id(farm_id)
+
+    # If cattle_id is provided, fetch actual cow parameters from DB
+    if cattle_id and (bw_kg is None or bcs is None):
+        cow = await supabase_db.fetch_one(
+            "SELECT estimated_weight_kg, bcs_score, breed FROM public.cattle WHERE farm_id = $1::uuid AND cattle_id ILIKE $2 LIMIT 1",
+            f_id, str(cattle_id).strip().upper()
+        )
+        if cow:
+            if bw_kg is None and cow.get("estimated_weight_kg"):
+                bw_kg = float(cow["estimated_weight_kg"])
+            if bcs is None and cow.get("bcs_score"):
+                bcs = float(cow["bcs_score"])
+
+    # Fallback sensible dairy defaults if not specified
+    eff_bw = bw_kg or 550.0
+    eff_milk = milk_yield_kg if milk_yield_kg is not None else 15.0
+    eff_dim = dim or 100
+    eff_bcs = bcs or 3.0
+    eff_parity = parity or 2
+    eff_fat = fat_percent or 4.0
+    eff_temp = ambient_temp_c or 27.0
+
+    lower_action = action.lower() if action else "query_rules"
+
+    if "dmi" in lower_action or "intake" in lower_action or lower_action == "calculate_dmi":
+        if category in ["growing_heifer", "heifer"]:
+            res = nasem_calculator.calculate_dmi_heifer(bw_kg=eff_bw)
+        elif category in ["dry_cow", "pregnant_dry_cow"]:
+            res = nasem_calculator.calculate_dmi_dry_cow(bw_kg=eff_bw, bcs=eff_bcs)
+        else:
+            res = nasem_calculator.calculate_dmi_lactating(
+                bw_kg=eff_bw, parity=eff_parity, dim=eff_dim, bcs=eff_bcs,
+                milk_yield_kg=eff_milk, fat_percent=eff_fat
+            )
+        return {
+            "source": "NASEM 2021 Nutrient Requirements of Dairy Cattle (Chapter 2)",
+            "calculation": "Dry Matter Intake (DMI)",
+            "cattle_id": cattle_id,
+            "data": res
+        }
+
+    elif "water" in lower_action or "fwi" in lower_action or lower_action == "calculate_water":
+        dmi_calc = nasem_calculator.calculate_dmi_lactating(bw_kg=eff_bw, parity=eff_parity, dim=eff_dim, bcs=eff_bcs, milk_yield_kg=eff_milk, fat_percent=eff_fat)
+        dmi_val = dmi_calc["result"]["dmi_kg_dm_day"]
+        res = nasem_calculator.calculate_water_intake(
+            category=category,
+            dmi_kg=dmi_val,
+            ambient_temp_c=eff_temp,
+            diet_dm_percent=diet_dm_percent or 45.0,
+            diet_cp_percent=diet_cp_percent or 16.5,
+            milk_yield_kg=eff_milk,
+            dim=eff_dim
+        )
+        return {
+            "source": "NASEM 2021 Nutrient Requirements of Dairy Cattle (Chapter 9)",
+            "calculation": "Free Water Intake (FWI)",
+            "cattle_id": cattle_id,
+            "data": res
+        }
+
+    elif "energy" in lower_action or "nel" in lower_action or "me" in lower_action or lower_action == "calculate_energy":
+        if category in ["growing_heifer", "heifer"]:
+            res = nasem_calculator.calculate_energy_heifer(bw_kg=eff_bw, adg_kg_day=adg_kg_day or 0.75)
+        else:
+            res = nasem_calculator.calculate_energy_adult(
+                bw_kg=eff_bw, milk_yield_kg=eff_milk, fat_percent=eff_fat, gestation_day=gestation_day
+            )
+        return {
+            "source": "NASEM 2021 Nutrient Requirements of Dairy Cattle (Chapter 3 & 11)",
+            "calculation": "Energy Requirements (NEL / ME)",
+            "cattle_id": cattle_id,
+            "data": res
+        }
+
+    elif "mineral" in lower_action or "calcium" in lower_action or "phosphorus" in lower_action or lower_action == "calculate_minerals":
+        dmi_calc = nasem_calculator.calculate_dmi_lactating(bw_kg=eff_bw, parity=eff_parity, dim=eff_dim, bcs=eff_bcs, milk_yield_kg=eff_milk, fat_percent=eff_fat)
+        dmi_val = dmi_calc["result"]["dmi_kg_dm_day"]
+        res = nasem_calculator.calculate_factorial_minerals(dmi_kg=dmi_val, bw_kg=eff_bw, milk_yield_kg=eff_milk)
+        return {
+            "source": "NASEM 2021 Nutrient Requirements of Dairy Cattle (Chapter 7)",
+            "calculation": "Factorial Mineral Requirements (Ca & P)",
+            "cattle_id": cattle_id,
+            "data": res
+        }
+
+    else:
+        # Query rules / NASEM knowledge
+        res = nasem_calculator.query_nasem_rules(query or "general dairy feeding rules")
+        return {
+            "source": "NASEM 2021 Unified Dairy Feed, Water, Energy, Mineral Ruleset",
+            "ruleset_id": "dairy_feed_calculation_nasem2021_consistent_v1",
+            "query": query,
+            "data": res
+        }
+
 # ----------------- SPECIFIED SUPABASE FARM AGENTIC TOOLS ----------------- #
 
 async def get_cattle_profile(cattle_id: Optional[str] = None, farm_id: Optional[str] = None) -> Dict[str, Any]:
@@ -1569,6 +1691,35 @@ FARM_TOOLS = {
                 "farm_id": {"type": "string", "description": "Farm UUID (optional)"}
             },
             "required": ["query"]
+        }
+    },
+    "calculate_nasem_dairy_nutrition_and_feed": {
+        "function": calculate_nasem_dairy_nutrition_and_feed,
+        "description": "Calculate or query authoritative NASEM 2021 dairy cattle nutrition, Dry Matter Intake (DMI via Eq 2-1, 2-3, 12-1), Free Water Intake (FWI via Eq 9-1, 9-3), Net Energy of Lactation (NEL via Eq 3-13, 3-14b/c, 3-18), Metabolizable Energy for heifers (ME via Eq 11-2, 3-20), Metabolizable Protein (MP), factorial Calcium/Phosphorus requirements, mineral mixture dosing based on deficit, and unified ration optimization balance status.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["calculate_dmi", "calculate_water", "calculate_energy", "calculate_minerals", "query_rules"],
+                    "description": "The specific calculation or rule lookup to perform."
+                },
+                "category": {
+                    "type": "string",
+                    "enum": ["lactating_cow", "dry_cow", "pregnant_dry_cow", "growing_heifer"],
+                    "description": "Cattle category (default: lactating_cow)"
+                },
+                "cattle_id": {"type": "string", "description": "Optional specific cow ID (e.g. COW001, COW002) to pull live weight and BCS from farm database"},
+                "bw_kg": {"type": "number", "description": "Body weight in kg (default: 550 kg)"},
+                "milk_yield_kg": {"type": "number", "description": "Daily milk yield in kg/day (default: 15.0 kg)"},
+                "fat_percent": {"type": "number", "description": "Milk fat percentage (default: 4.0%)"},
+                "dim": {"type": "integer", "description": "Days in milk (default: 100)"},
+                "bcs": {"type": "number", "description": "Body condition score on 1-5 scale (default: 3.0)"},
+                "parity": {"type": "integer", "description": "Parity / lactation number (1 for primiparous; 2+ for multiparous)"},
+                "ambient_temp_c": {"type": "number", "description": "Daily mean ambient temperature in degrees Celsius (default: 27 deg C)"},
+                "query": {"type": "string", "description": "Specific question or rule topic in NASEM 2021 ruleset"},
+                "farm_id": {"type": "string", "description": "Farm UUID (optional)"}
+            }
         }
     }
 }

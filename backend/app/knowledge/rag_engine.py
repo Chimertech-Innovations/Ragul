@@ -12,13 +12,16 @@ class VeterinaryRAGEngine:
         self.vet_qa_path = os.path.join(self.kb_dir, "veterinary_qa.json")
         self.products_path = os.path.join(self.kb_dir, "products_catalog.json")
         
+        self.nasem_rules_path = os.path.join(self.kb_dir, "nasem_feed_nutrition_rules.json")
+        
         self.vet_qa_data: List[Dict[str, Any]] = []
         self.products_data: List[Dict[str, Any]] = []
         self.scenarios_data: List[Dict[str, Any]] = []
+        self.nasem_rules_data: Dict[str, Any] = {}
         self.load_knowledge_base()
 
     def load_knowledge_base(self):
-        """Loads both veterinary Q&A and Chimertech product knowledge bases from JSON."""
+        """Loads veterinary Q&A, products, and NASEM 2021 dairy nutrition knowledge bases from JSON."""
         try:
             if os.path.exists(self.vet_qa_path):
                 with open(self.vet_qa_path, "r", encoding="utf-8") as f:
@@ -36,6 +39,13 @@ class VeterinaryRAGEngine:
                     logger.info(f"[RAG] Loaded {len(self.products_data)} products and {len(self.scenarios_data)} scenarios.")
             else:
                 logger.warning(f"[RAG] Products catalog file not found at {self.products_path}")
+
+            if os.path.exists(self.nasem_rules_path):
+                with open(self.nasem_rules_path, "r", encoding="utf-8") as f:
+                    self.nasem_rules_data = json.load(f)
+                    logger.info(f"[RAG] Loaded NASEM 2021 Dairy Nutrition ruleset: {self.nasem_rules_data.get('ruleset_id')}")
+            else:
+                logger.warning(f"[RAG] NASEM rules file not found at {self.nasem_rules_path}")
         except Exception as e:
             logger.error(f"[RAG] Error loading knowledge bases: {e}")
 
@@ -123,6 +133,20 @@ class VeterinaryRAGEngine:
             if score > best_scenario_score:
                 best_scenario_score = score
                 best_scenario = sc
+
+        lower_q = cleaned_query.lower()
+        is_nasem_q = any(w in lower_q for w in [
+            "nasem", "dmi", "dry matter intake", "fwi", "free water intake",
+            "water requirement", "water intake", "water formula", "energy requirement",
+            "nel", "me", "milk energy", "gestation energy", "gravid uterus",
+            "heifer me", "frame growth", "factorial mineral", "calcium requirement",
+            "phosphorus requirement", "mineral mixture", "ration optimization",
+            "balance status", "single source of truth", "deprecated formula", "deprecated rule"
+        ])
+        if is_nasem_q:
+            nasem_match = self.search_nasem_nutrition(cleaned_query)
+            if nasem_match:
+                return nasem_match
 
         # If no clinical or product match exceeds confidence threshold
         if best_vet_score < 5.0 and best_scenario_score < 5.0:
@@ -288,5 +312,49 @@ class VeterinaryRAGEngine:
             "spoken_response": full_spoken_text,
             "score": max(best_vet_score, best_scenario_score)
         }
+
+    def search_nasem_nutrition(self, query: str) -> Optional[Dict[str, Any]]:
+        """
+        Specialized RAG retriever for NASEM 2021 Dairy Nutrition, Feed, DMI, Water, Energy,
+        Minerals, and Ration Optimization rules.
+        """
+        try:
+            from app.knowledge.nasem_calculator import nasem_calculator
+            rules_res = nasem_calculator.query_nasem_rules(query)
+            if not rules_res or not rules_res.get("matches"):
+                return None
+
+            matches = rules_res.get("matches", [])
+            matched_cats = [m.get("category", "") for m in matches if m.get("category")]
+            cat_label = ", ".join(matched_cats[:2]) if matched_cats else "Dairy Feed & Nutrition"
+
+            overview = (
+                "According to NASEM 2021 (Nutrient Requirements of Dairy Cattle, 8th Revised Edition), "
+                "dairy feeding, water intake, energy, and minerals must follow unified, traceable scientific equations. "
+                "Key principles: 1) Single source of truth across all farm tables; 2) Lactating DMI follows NASEM Eq 2-1; "
+                "3) Free Water Intake follows Eq 9-1/9-3 without extra 1.44 heat multipliers; 4) Adult energy uses NEL while heifers use ME; "
+                "5) Minerals use factorial requirements (Ca Eq 7-1, P system) with mineral mixture prescribed strictly based on calculated deficits."
+            )
+
+            return {
+                "topic": f"NASEM 2021 Dairy Nutrition ({cat_label})",
+                "clinical_answer": overview,
+                "action": "Apply authoritative NASEM 2021 equations. Never apply arbitrary multipliers or generic category mineral averages.",
+                "prevention": "Prevent metabolic disorders (acidosis, milk fever, ketosis) by balancing rations joint-farm wide with hard inventory limits.",
+                "prevention_tips": [
+                    "Single source of truth: all animal and herd tables must consume identical calculated result objects",
+                    "Water intake: use NASEM Eq 9-1 (lactating) or Eq 9-3 (dry) - do not apply extra 1.44 heat multiplier",
+                    "Minerals: calculate natural feed supply, subtract from factorial requirement, and dose mineral mix only to bridge deficits",
+                    "Ration balance: DMI adequacy alone never equals BALANCED - all energy, protein, mineral, and inventory checks must pass"
+                ],
+                "rules_data": rules_res,
+                "products": [],
+                "store_url": "https://chimertech.shop/",
+                "spoken_response": f"Sir, under NASEM 2021 standards for {cat_label}, all calculations are strictly standardized. Lactating DMI follows Equation 2-1, water intake uses Equation 9-1 without double-counting temperature, and mineral mixtures must be dosed strictly based on calculated nutritional deficits.",
+                "score": 25.0
+            }
+        except Exception as e:
+            logger.error(f"[RAG] Error in search_nasem_nutrition: {e}")
+            return None
 
 rag_engine = VeterinaryRAGEngine()

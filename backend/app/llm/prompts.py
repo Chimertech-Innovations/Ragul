@@ -53,6 +53,30 @@ STRICT TEMPORAL & ACCURACY RULES:
      - Emphasize: 'You can only view and access your own farm's data.'
      - Users cannot access another farm or view other users' records.
      - Security is enforced via Supabase Row-Level Security (RLS) and farm UUID authentication.
+9. NASEM 2021 UNIFIED DAIRY FEED, WATER, ENERGY & MINERAL STANDARD:
+   • STANDARD: Follow NASEM 2021 (Nutrient Requirements of Dairy Cattle, 8th Revised Edition, ruleset dairy_feed_calculation_nasem2021_consistent_v1).
+   • DRY MATTER INTAKE (DMI):
+     - Lactating cows: Use NASEM Eq 2-1: DMI = (3.7 + 5.7*Parity + 0.305*MilkE + 0.022*BW + (-0.689 - 1.87*Parity)*BCS) * (1 - (0.212 + 0.136*Parity)*exp(-0.053*DIM))
+     - Growing heifers: Use NASEM Eq 2-3 (or Eq 2-4 if NDF is known).
+     - Dry cows: Use NASEM Eq 12-1 for late gestation (-3 weeks).
+     - DO NOT use deprecated approximations: no (0.028*BW + 0.33*FCM), no universal 0.022*BW or 0.026*BW.
+   • FREE WATER INTAKE (FWI):
+     - Lactating cows: Use NASEM Eq 9-1: FWI = -91.1 + 2.93*DMI + 0.61*DM% + 0.062*NaK + 2.49*CP% + 0.76*Temp (where NaK = ((Na%/0.023) + (K%/0.039))*10).
+     - Dry cows: Use NASEM Eq 9-3: FWI = 1.16*DMI + 0.23*DM% + 0.44*Temp + 0.061*((Temp - 16.4)^2).
+     - CRITICAL: Ambient temperature is already an explicit scientific term in Eq 9-1 and 9-3! NEVER apply an arbitrary 1.44 heat-stress multiplier (that double-counts temperature!).
+     - DO NOT use deprecated water formulas: no 15.99 + 1.58*DMI..., no BW*0.09, no BW*0.08.
+   • ENERGY REQUIREMENTS:
+     - Adult cows: Use Net Energy of Lactation (NEL) basis: Maintenance = 0.10 * (BW^0.75) Mcal/day (Eq 3-13); Milk energy from fat, protein, lactose (Eq 3-14b/c); Gestation energy (Eq 3-15 to 3-18).
+     - Growing heifers: Use Metabolizable Energy (ME) basis: Maintenance = 0.15 * (BW^0.75) Mcal/day (Eq 11-2); Frame growth (Eq 3-20a-d).
+     - CRITICAL: Never mix heifer ME and adult NEL into one unlabeled total.
+   • MINERAL REQUIREMENTS & MINERAL MIXTURES:
+     - Factorial Calcium: Maintenance absorbed Ca = 0.90 * DMI g/day (Eq 7-1).
+     - Factorial Phosphorus: Maintenance absorbed P = 1.0 * DMI + 0.0006 * BW g/day; Lactation P = 0.90 * MilkYield g/day.
+     - Mineral Mixture Rule: NEVER auto-prescribe a flat 50–130g without calculating the exact deficit! First calculate natural feed supply, compare with factorial requirements, find deficits, and optimize supplement dose to bridge deficits.
+   • RATION OPTIMIZATION & BALANCED STATUS:
+     - Single source of truth: all animal, herd, and KT tables must consume identical calculated result objects.
+     - Inventory is a hard constraint.
+     - DMI adequacy alone NEVER equals BALANCED! All energy, protein (MP), minerals, fiber/starch, and inventory checks must pass.
 
 CRITICAL FORMATTING RULES (HIGH READABILITY & CLARITY):
 1. NEVER WRITE WALLS OF DENSE PARAGRAPHS. The user must be able to read and understand your message in 5 seconds on a farm screen.

@@ -1,0 +1,994 @@
+{
+  "schema_version": "1.0.0",
+  "ruleset_id": "dairy_feed_calculation_nasem2021_consistent_v1",
+  "title": "Unified Dairy Feed, Water, Energy, Mineral and Ration Optimization Rules for AI Agent",
+  "purpose": [
+    "Provide one source of truth for animal, herd, KT, dashboard and PDF calculations.",
+    "Prevent duplicate formulas from producing conflicting DMI, water, energy or mineral values.",
+    "Provide traceable calculation IDs so every displayed value can be reproduced.",
+    "Separate scientific equations from software policy thresholds."
+  ],
+  "scientific_basis": {
+    "primary_standard": "NASEM 2021, Nutrient Requirements of Dairy Cattle, 8th Revised Edition",
+    "equation_sources_used": [
+      "Chapter 2: Dry Matter Intake",
+      "Chapter 3: Energy",
+      "Chapter 7: Minerals",
+      "Chapter 9: Water",
+      "Chapter 11: Growth",
+      "Chapter 12: Dry and Transition Cows",
+      "Chapter 20: Model equations/documentation"
+    ],
+    "important_scope_note": "This JSON standardizes the calculations discussed in the feed-calculation review. It is not a complete reimplementation of every equation in the full NASEM dairy model."
+  },
+  "core_architecture_rules": {
+    "single_source_of_truth": true,
+    "rule": "All frontend tables, animal tables, herd tables, KT tables, API responses and PDF reports must consume the same calculated result objects. No UI module may independently recalculate DMI, water, minerals or energy.",
+    "feed_composition_source": "consolidated_minerals.dat plus the validated master feed composition database",
+    "hardcoded_feed_category_minerals_allowed": false,
+    "duplicate_formula_engines_allowed": false,
+    "supplements_count_in_total_nutrient_supply": true,
+    "supplements_also_shown_separately": true,
+    "inventory_is_hard_constraint": true,
+    "farm_optimization_is_joint_across_groups": true,
+    "individual_ration_optimization_default": false
+  },
+  "units": {
+    "body_weight": "kg",
+    "mature_body_weight": "kg",
+    "milk_yield": "kg/day",
+    "dry_matter_intake": "kg DM/day",
+    "feed_as_fed": "kg as-fed/day",
+    "energy": "Mcal/day",
+    "diet_energy_density": "Mcal/kg DM",
+    "macro_mineral_requirement": "g/day",
+    "trace_mineral_requirement": "mg/day",
+    "macro_mineral_feed_concentration": "% of DM",
+    "trace_mineral_feed_concentration": "mg/kg DM",
+    "temperature": "degC",
+    "water": "L/day",
+    "diet_percentages": "% of DM",
+    "body_condition_score": "1-5",
+    "days_in_milk": "day",
+    "gestation_day": "day",
+    "average_daily_gain": "kg/day"
+  },
+  "input_schema": {
+    "environment": {
+      "mean_ambient_temperature_c": {
+        "type": "number",
+        "required_for": [
+          "water_intake"
+        ],
+        "description": "Daily mean ambient temperature."
+      },
+      "relative_humidity_percent": {
+        "type": "number|null",
+        "required": false,
+        "description": "May be used for heat-stress advisory logic but is not an input to the official NASEM water Eq 9-1/9-3."
+      }
+    },
+    "farm": {
+      "planning_days": {
+        "type": "number",
+        "default": 1,
+        "minimum": 1,
+        "description": "Inventory planning horizon."
+      },
+      "currency": {
+        "type": "string",
+        "default": "INR"
+      }
+    },
+    "animal": {
+      "animal_id": "string",
+      "group_id": "string",
+      "category": [
+        "lactating_cow",
+        "dry_cow",
+        "pregnant_dry_cow",
+        "growing_heifer",
+        "pregnant_heifer",
+        "bull",
+        "calf"
+      ],
+      "breed": "string|null",
+      "body_weight_kg": "number",
+      "mature_body_weight_kg": "number|null",
+      "parity_number": "integer|null",
+      "parity_factor": {
+        "type": "number|null",
+        "derivation": "0 for primiparous lactating cow; 1 for multiparous lactating cow"
+      },
+      "body_condition_score_1_to_5": "number|null",
+      "milk_yield_kg_day": "number|null",
+      "milk_fat_percent": "number|null",
+      "milk_true_protein_percent": "number|null",
+      "milk_lactose_percent": "number|null",
+      "days_in_milk": "integer|null",
+      "pregnant": "boolean",
+      "insemination_date": "date|null",
+      "pregnancy_month": "number|null",
+      "gestation_day": "number|null",
+      "expected_gestation_length_days": {
+        "type": "number",
+        "default_if_unknown": 280
+      },
+      "expected_calf_birth_weight_kg": "number|null",
+      "target_adg_kg_day": "number|null",
+      "measured_dmi_kg_day": "number|null"
+    },
+    "feed": {
+      "feed_id": "string",
+      "feed_name": "string",
+      "feed_class": [
+        "green_forage",
+        "dry_forage",
+        "silage",
+        "concentrate",
+        "grain",
+        "protein_meal",
+        "byproduct",
+        "mineral_mixture",
+        "salt",
+        "additive",
+        "other"
+      ],
+      "dry_matter_percent": "number",
+      "cp_percent_dm": "number|null",
+      "ndf_percent_dm": "number|null",
+      "forage_ndf_percent_dm": "number|null",
+      "adf_percent_dm": "number|null",
+      "starch_percent_dm": "number|null",
+      "fat_percent_dm": "number|null",
+      "ash_percent_dm": "number|null",
+      "nel_mcal_kg_dm_legacy_linear": "number|null",
+      "me_mcal_kg_dm_legacy_linear": "number|null",
+      "mp_g_kg_dm_if_validated": "number|null",
+      "minerals": {
+        "Ca_percent_dm": "number|null",
+        "P_percent_dm": "number|null",
+        "Mg_percent_dm": "number|null",
+        "K_percent_dm": "number|null",
+        "Na_percent_dm": "number|null",
+        "Cl_percent_dm": "number|null",
+        "S_percent_dm": "number|null",
+        "Co_mg_kg_dm": "number|null",
+        "Cu_mg_kg_dm": "number|null",
+        "Fe_mg_kg_dm": "number|null",
+        "I_mg_kg_dm": "number|null",
+        "Mn_mg_kg_dm": "number|null",
+        "Se_mg_kg_dm": "number|null",
+        "Zn_mg_kg_dm": "number|null",
+        "Mo_mg_kg_dm_optional_antagonist_tracking": "number|null"
+      },
+      "cost_per_kg_as_fed": "number",
+      "inventory_as_fed_kg": "number",
+      "reserved_inventory_kg": {
+        "type": "number",
+        "default": 0
+      },
+      "spoilage_fraction": {
+        "type": "number",
+        "default": 0,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "min_inclusion_percent_dmi": "number|null",
+      "max_inclusion_percent_dmi": "number|null"
+    }
+  },
+  "derived_feed_calculations": {
+    "dm_fraction": {
+      "formula": "DM_fraction = dry_matter_percent / 100"
+    },
+    "feed_dm_kg_day": {
+      "formula": "feed_DM_kg = feed_as_fed_kg * DM_fraction"
+    },
+    "feed_as_fed_from_dm": {
+      "formula": "feed_as_fed_kg = feed_DM_kg / DM_fraction",
+      "validation": "DM_fraction must be > 0"
+    },
+    "daily_available_inventory": {
+      "formula": "daily_available_as_fed_kg = max(0, (inventory_as_fed_kg - reserved_inventory_kg) * (1 - spoilage_fraction) / planning_days)"
+    },
+    "weighted_diet_nutrient_percent": {
+      "formula": "diet_nutrient_percent_DM = sum(feed_DM_i * nutrient_percent_i) / sum(feed_DM_i)"
+    },
+    "macro_mineral_supply": {
+      "formula": "mineral_g_day = feed_DM_kg * mineral_percent_DM / 100 * 1000"
+    },
+    "trace_mineral_supply": {
+      "formula": "trace_mineral_mg_day = feed_DM_kg * mineral_mg_per_kg_DM"
+    }
+  },
+  "calculation_sequence": [
+    "validate_inputs",
+    "classify_animals_and_groups",
+    "derive_gestation_day",
+    "calculate_milk_energy_if_lactating",
+    "calculate_official_dmi_target",
+    "calculate_energy_and_protein_requirements",
+    "calculate_mineral_requirements",
+    "convert_inventory_to_daily_hard_limits",
+    "optimize_joint_farm_ration",
+    "recalculate_whole_diet_nutrient_profile",
+    "calculate_water_from_final_or_candidate_ration",
+    "calculate_nutrient_adequacy",
+    "classify_balance_status",
+    "calculate_shortages_and_purchase_requirements",
+    "generate_traceable_animal_group_farm_outputs"
+  ],
+  "dmi_engine": {
+    "priority_rule": "If reliable measured DMI is available, preserve it as measured_DMI and also calculate predicted_DMI for comparison. Do not silently overwrite measured intake.",
+    "lactating_cow": {
+      "equation_id": "NASEM_2021_EQ_2_1",
+      "scientific_status": "authoritative_equation",
+      "formula": "DMI = (3.7 + 5.7*Parity + 0.305*MilkE + 0.022*BW + (-0.689 - 1.87*Parity)*BCS) * (1 - (0.212 + 0.136*Parity)*exp(-0.053*DIM))",
+      "output_unit": "kg DM/day",
+      "inputs": {
+        "Parity": "0 primiparous; 1 multiparous",
+        "MilkE": "milk energy output, Mcal/day",
+        "BW": "body weight, kg",
+        "BCS": "body condition score, 1-5",
+        "DIM": "days in milk"
+      },
+      "do_not_use_as_official": [
+        "(0.028*BW + 0.33*FCM)*DIM_lag*heat_penalty"
+      ],
+      "important_limitations": [
+        "Developed primarily from Holstein data.",
+        "Published equation does not include an explicit ambient-temperature multiplier.",
+        "Do not apply an arbitrary heat-penalty multiplier and still label the result as NASEM Eq 2-1."
+      ]
+    },
+    "growing_heifer_when_diet_ndf_unknown": {
+      "equation_id": "NASEM_2021_EQ_2_3",
+      "scientific_status": "authoritative_equation",
+      "formula": "DMI = 0.022*MatBW*(1 - exp(-1.54*(BW/MatBW)))",
+      "output_unit": "kg DM/day",
+      "inputs": {
+        "BW": "current body weight, kg",
+        "MatBW": "expected mature body weight, kg"
+      }
+    },
+    "growing_heifer_when_diet_ndf_known": {
+      "equation_id": "NASEM_2021_EQ_2_4",
+      "scientific_status": "authoritative_equation",
+      "formula": "DMI = 0.0226*MatBW*(1-exp(-1.47*(BW/MatBW))) - 0.082*(NDF - (23.1 + 56*(BW/MatBW) - 30.6*(BW/MatBW)^2))",
+      "output_unit": "kg DM/day",
+      "preference": "Use when ration NDF is known with confidence."
+    },
+    "late_gestation_dry_cow_last_3_weeks": {
+      "equation_id": "NASEM_2021_EQ_12_1",
+      "scientific_status": "authoritative_equation",
+      "formula": "DMI_kg_per_100kg_BW = 1.47 - ((0.365 - 0.0028*NDF)*Week) - 0.035*(Week^2)",
+      "final_conversion": "DMI_kg_day = BW * DMI_kg_per_100kg_BW / 100",
+      "constraints": {
+        "NDF_percent_DM": "clamp to 30-55 for this equation",
+        "Week": "negative week before calving, limited to -3 to 0"
+      },
+      "bcs_adjustment": "If BCS > 4, NASEM notes limited data suggesting estimated DMI may be reduced by 8%."
+    },
+    "late_gestation_heifer_last_3_weeks": {
+      "equation_id": "NASEM_2021_EQ_12_2",
+      "scientific_status": "authoritative_equation",
+      "formula": "DMI_kg_per_100kg_BW = (1.47 - ((0.365 - 0.0028*NDF)*Week) - 0.035*(Week^2))*0.88",
+      "final_conversion": "DMI_kg_day = BW * DMI_kg_per_100kg_BW / 100"
+    },
+    "far_off_dry_cow": {
+      "scientific_status": "NASEM_dry_period_rule",
+      "rule": "Before the last 3 weeks prepartum, use the week-3 value from Eq 12-1 as the dry-period intake estimate.",
+      "note": "Do not use BW*0.022 as a universal dry-cow DMI equation."
+    },
+    "bull": {
+      "scientific_status": "not_defined_by_this_ruleset",
+      "rule": "Do not label BW*0.022 as NASEM dairy bull DMI. Use a separately validated beef/bull requirement model if bulls are included."
+    },
+    "calf": {
+      "scientific_status": "not_defined_by_this_ruleset",
+      "rule": "Use the NASEM calf model rather than adult/heifer DMI equations."
+    }
+  },
+  "milk_energy_engine": {
+    "preferred_when_fat_true_protein_lactose_available": {
+      "equation_id": "NASEM_2021_EQ_3_14b",
+      "scientific_status": "authoritative_equation",
+      "formula": "Milk_NEL_Mcal_per_kg = 9.29*fat_kg_per_kg_milk + 5.85*true_protein_kg_per_kg_milk + 3.95*lactose_kg_per_kg_milk",
+      "milk_energy_output": "MilkE_Mcal_day = milk_yield_kg_day * Milk_NEL_Mcal_per_kg"
+    },
+    "fallback_when_only_fat_available": {
+      "equation_id": "NASEM_2021_EQ_3_14c",
+      "scientific_status": "authoritative_equation",
+      "formula": "Milk_NEL_Mcal_per_kg = 0.360 + 0.0969*fat_percent",
+      "milk_energy_output": "MilkE_Mcal_day = milk_yield_kg_day * Milk_NEL_Mcal_per_kg"
+    },
+    "lactose_fallback": {
+      "value_fraction": 0.0485,
+      "rule": "If lactose is not measured and the full milk-component formula is being used, NASEM notes lactose is generally about 4.85%."
+    }
+  },
+  "water_engine": {
+    "general_rules": [
+      "Water must be available free-choice; predicted water intake is not a ration cap.",
+      "Do not calculate one water value in the Animal Engine and another in the KT Engine.",
+      "Use the same final/candidate diet composition object used by the ration engine."
+    ],
+    "lactating_cow_primary": {
+      "equation_id": "NASEM_2021_EQ_9_1",
+      "scientific_status": "authoritative_equation",
+      "formula": "FWI = -91.1 + 2.93*DMI + 0.61*DM_percent + 0.062*NaK + 2.49*CP_percent + 0.76*Temp",
+      "output_unit": "L/day approximately kg/day",
+      "inputs": {
+        "DMI": "kg DM/day",
+        "DM_percent": "diet dry matter percentage",
+        "CP_percent": "diet crude protein percentage of DM",
+        "Temp": "daily mean ambient temperature, degC",
+        "NaK": "dietary Na + K concentration, mEq/kg DM"
+      },
+      "NaK_formula": "NaK = ((Na_percent/0.023) + (K_percent/0.039))*10",
+      "selection_rule": "Preferred when a reliable DMI estimate is available."
+    },
+    "lactating_cow_fallback_if_dmi_not_reliable": {
+      "equation_id": "NASEM_2021_EQ_9_2",
+      "scientific_status": "authoritative_equation",
+      "formula": "FWI = -60.2 + 1.43*Milk + 0.064*NaK + 0.83*DM_percent + 0.54*Temp + 0.08*DIM",
+      "output_unit": "L/day approximately kg/day"
+    },
+    "dry_cow": {
+      "equation_id": "NASEM_2021_EQ_9_3",
+      "scientific_status": "authoritative_equation",
+      "formula": "FWI = 1.16*DMI + 0.23*DM_percent + 0.44*Temp + 0.061*((Temp - 16.4)^2)",
+      "output_unit": "L/day approximately kg/day"
+    },
+    "heifer": {
+      "scientific_status": "no_validated_NASEM_FWI_equation",
+      "rule": "NASEM states data for older growing heifers are limited and no equation has been developed to predict FWI.",
+      "software_behavior": "Show 'planning estimate unavailable from NASEM equation' unless a separate validated heifer-water model is configured. Never present BW*0.08 as an official NASEM result."
+    },
+    "calf": {
+      "scientific_status": "no_general_NASEM_FWI_prediction_equation",
+      "rule": "Provide free-choice water. Do not reuse adult-cow water equations."
+    },
+    "heat_stress_rule": {
+      "apply_extra_1_44_multiplier_after_eq_9_1_or_9_3": false,
+      "reason": "Ambient temperature is already an input to the recommended equations. A second arbitrary multiplier would double-count temperature unless a separately validated model explicitly requires it."
+    },
+    "deprecated_formulas": [
+      "15.99 + 1.58*DMI + 0.90*Milk + 0.05*BW*0.1",
+      "BW*0.09 for pregnancy water",
+      "BW*0.08 for dry/heifer/bull water as an official standard"
+    ]
+  },
+  "energy_requirement_engine": {
+    "adult_cow_energy_basis": "NEL",
+    "pre_first_calving_heifer_energy_basis": "ME",
+    "critical_rule": "Do not mix heifer ME requirements and adult-cow NEL requirements in one unlabeled total.",
+    "adult_cow": {
+      "maintenance": {
+        "equation_id": "NASEM_2021_EQ_3_13",
+        "scientific_status": "authoritative_equation",
+        "formula": "NEL_maintenance = 0.10*(BW^0.75)",
+        "unit": "Mcal/day"
+      },
+      "milk": {
+        "formula": "NEL_milk = MilkE_Mcal_day",
+        "unit": "Mcal/day"
+      },
+      "gestation": {
+        "input_priority_for_calf_birth_weight": [
+          "measured/known expected calf birth weight",
+          "breed- and parity-specific validated estimate",
+          "configured fallback estimate explicitly labeled as estimated"
+        ],
+        "do_not_hardcode_as_authoritative": "CalfBirthWeight = MatureBW*0.07",
+        "gravid_uterus_at_parturition": {
+          "equation_id": "NASEM_2021_EQ_3_15a",
+          "formula": "GrUter_Wt_parturition = CalfBirthWeight*1.825",
+          "unit": "kg"
+        },
+        "uterus_immediately_postcalving": {
+          "equation_id": "NASEM_2021_EQ_3_15b",
+          "formula": "Uter_Wt_parturition = CalfBirthWeight*0.2288",
+          "unit": "kg"
+        },
+        "current_gravid_uterus_weight": {
+          "equation_id": "NASEM_2021_EQ_3_16a",
+          "formula": "GrUter_Wt = GrUter_Wt_parturition * exp(-(0.0243 - 0.0000245*DayGest)*(280-DayGest))",
+          "valid_daygest_range": "12-280"
+        },
+        "daily_gravid_uterus_gain": {
+          "equation_id": "NASEM_2021_EQ_3_17a",
+          "formula": "GrUter_Wt_Gain = (0.0243 - 0.0000245*DayGest)*GrUter_Wt",
+          "unit": "kg/day"
+        },
+        "gestational_nel": {
+          "equation_id": "NASEM_2021_EQ_3_18",
+          "formula": "NEL_gestation = GrUter_Wt_Gain*4.16",
+          "unit": "Mcal/day"
+        }
+      },
+      "total": {
+        "formula": "NEL_required = NEL_maintenance + NEL_milk + NEL_gestation + NEL_frame_growth + NEL_body_reserve_change + NEL_other_validated_adjustments",
+        "rule": "Only include components that actually apply and can be calculated from valid inputs."
+      },
+      "deprecated_growth_rules": [
+        "heifer_count*2.5 Mcal/day",
+        "primiparous_maintenance*0.20 as a universal growth allowance"
+      ]
+    },
+    "growing_heifer": {
+      "maintenance_me": {
+        "equation_id": "NASEM_2021_EQ_11_2",
+        "scientific_status": "authoritative_equation",
+        "formula": "ME_maintenance = 0.15*(BW^0.75)",
+        "unit": "Mcal/day"
+      },
+      "frame_growth": {
+        "EBG_from_ADG": "EBG = 0.85*ADG for pre-first-calving heifer frame-growth calculations",
+        "fat_in_adg": {
+          "equation_id": "NASEM_2021_EQ_3_20a",
+          "formula": "Fat_ADG = (0.067 + 0.375*(BW/MatBW))*(EBG/ADG)"
+        },
+        "protein_in_adg": {
+          "equation_id": "NASEM_2021_EQ_3_20b",
+          "formula": "Protein_ADG = (0.201 - 0.081*(BW/MatBW))*(EBG/ADG)"
+        },
+        "retained_energy_per_kg_adg": {
+          "equation_id": "NASEM_2021_EQ_3_20c",
+          "formula": "RE_FADG = 9.4*Fat_ADG + 5.55*Protein_ADG",
+          "unit": "Mcal/kg ADG"
+        },
+        "me_for_growth_per_kg_adg": {
+          "equation_id": "NASEM_2021_EQ_3_20d",
+          "formula": "ME_FADG = RE_FADG/0.40",
+          "unit": "Mcal/kg ADG"
+        },
+        "daily_me_growth": {
+          "formula": "ME_growth = ME_FADG*ADG",
+          "unit": "Mcal/day"
+        }
+      },
+      "total_me_requirement": {
+        "formula": "ME_required = ME_maintenance + ME_growth + ME_gestation_if_applicable + other_validated_components",
+        "unit": "Mcal/day"
+      }
+    },
+    "whole_diet_energy_warning": {
+      "scientific_status": "critical_NASEM_modeling_constraint",
+      "rule": "NASEM 2021 calculates ME and NEL on a total-diet basis. Treating each feed as having a perfectly additive fixed NEL and solving a linear LP is an approximation.",
+      "preferred_implementation": "Use LP/MILP to generate candidate rations, recalculate whole-diet ME/NEL using the validated energy engine, then iteratively re-optimize until energy adequacy and ration constraints converge.",
+      "legacy_mode": "If fixed feed NEL/ME values are used for linear optimization, label the result as an approximate screening formulation and perform a final whole-diet validation before marking the ration Balanced."
+    }
+  },
+  "protein_engine": {
+    "preferred_primary_metric": "MP",
+    "cp_role": "screening/secondary adequacy metric",
+    "rules": [
+      "Do not call a diet protein-balanced solely because CP is adequate when a validated MP model is available.",
+      "If the current feed database cannot calculate MP reliably, use CP as a temporary fallback and mark protein_basis='CP_fallback'.",
+      "Do not invent feed MP values."
+    ],
+    "growing_heifer_maintenance_mp_components": {
+      "scurf": {
+        "equation_id": "NASEM_2021_EQ_11_3a",
+        "formula": "MP_scurf_g_day = (0.20*(BW^0.60))/0.69"
+      },
+      "endogenous_urinary": {
+        "equation_id": "NASEM_2021_EQ_11_3b",
+        "formula": "MP_endogenous_urinary_g_day = 53*6.25*BW*0.001"
+      },
+      "metabolic_fecal": {
+        "equation_id": "NASEM_2021_EQ_11_3c",
+        "formula": "MP_MFP_g_day = ((11.62 + 0.134*NDF_percent_DM)*DMI)/0.69"
+      }
+    },
+    "growing_heifer_growth_mp": {
+      "retained_protein": "RetainedProtein_g_day = Protein_ADG * ADG_kg_day * 1000",
+      "mp_to_np_efficiency": {
+        "equation_id": "NASEM_2021_EQ_11_8",
+        "formula": "NP_eff = 0.64 - 0.3*(BW/MatBW)",
+        "note": "Apply within the biological/model range used for growing heifers; do not extrapolate blindly beyond maturity."
+      },
+      "mp_growth": {
+        "equation_id": "NASEM_2021_EQ_11_9",
+        "formula": "MP_growth_g_day = RetainedProtein_g_day / NP_eff"
+      }
+    }
+  },
+  "mineral_engine": {
+    "composition_rule": {
+      "primary_source": "validated feed-specific mineral composition from consolidated_minerals.dat/master feed database",
+      "hardcoded_category_averages": false,
+      "reason": "Using generic green/dry/cake values in one table and feed-specific values in another guarantees inconsistent mineral totals."
+    },
+    "tracked_minerals": {
+      "macro": [
+        "Ca",
+        "P",
+        "Mg",
+        "K",
+        "Na",
+        "Cl",
+        "S"
+      ],
+      "trace": [
+        "Co",
+        "Cu",
+        "Fe",
+        "I",
+        "Mn",
+        "Se",
+        "Zn"
+      ],
+      "optional_antagonist_or_safety_tracking": [
+        "Mo"
+      ]
+    },
+    "supply_calculation": {
+      "natural_feed_supply": "sum mineral supplied by all feeds",
+      "supplement_supply": "sum mineral supplied by mineral mixture, salt and other mineral supplements",
+      "total_supply": "natural_feed_supply + supplement_supply",
+      "reporting_rule": "Show natural feed and supplement contributions separately, but total adequacy must use their sum."
+    },
+    "calcium": {
+      "maintenance_absorbed_requirement": {
+        "equation_id": "NASEM_2021_EQ_7_1",
+        "formula": "Ca_maintenance_absorbed_g_day = 0.90*DMI"
+      },
+      "rule": "Use the full factorial Ca requirement system for maintenance + lactation + pregnancy + growth and account for source-specific absorption when the validated model is available."
+    },
+    "phosphorus": {
+      "maintenance_absorbed_requirement": {
+        "formula": "P_maintenance_g_day = 1.0*DMI + 0.0006*BW"
+      },
+      "lactation_absorbed_requirement_if_using_default_milk_relation": {
+        "formula": "P_lactation_g_day = 0.90*MilkYield"
+      },
+      "rule": "Use factorial requirement and absorption logic, not a single fixed dietary P percentage for every animal."
+    },
+    "other_minerals": {
+      "rule": "Requirements must come from the validated NASEM mineral requirement module/table for the animal state. This JSON does not invent missing requirement equations for Mg, K, Na, Cl, S and trace minerals.",
+      "agent_behavior_if_requirement_missing": "Return requirement_status='not_calculated' rather than fabricating a target."
+    },
+    "mineral_mixture": {
+      "auto_prescribe_fixed_50_to_130_g_without_deficit_calculation": false,
+      "correct_process": [
+        "Calculate natural-feed mineral supply.",
+        "Calculate animal mineral requirements.",
+        "Calculate deficits.",
+        "Evaluate available supplement composition.",
+        "Optimize supplement dose subject to label/legal/safety limits.",
+        "Add supplement contribution to total supply.",
+        "Recalculate adequacy and upper-limit checks."
+      ]
+    }
+  },
+  "gestation_input_engine": {
+    "priority": [
+      "insemination/service date -> actual estimated DayGest",
+      "known gestation day",
+      "pregnancy month -> estimated DayGest"
+    ],
+    "pregnancy_month_fallback": {
+      "formula": "DayGest = pregnancy_month*30.4",
+      "label": "estimated_from_pregnancy_month",
+      "warning": "Pregnancy month is an approximation and creates uncertainty in gestational nutrient requirement."
+    },
+    "clamp_for_gestation_energy_equation": {
+      "minimum_day": 12,
+      "maximum_day": 280
+    }
+  },
+  "joint_ration_optimizer": {
+    "optimization_level": "farm x animal_group",
+    "decision_variable": "x[group,feed] = kg DM of feed per animal per day for that group",
+    "preferred_grouping_variables": [
+      "lactation status",
+      "parity",
+      "milk production band",
+      "DIM band",
+      "pregnancy stage",
+      "body weight/mature size",
+      "growth stage"
+    ],
+    "objective_default": "minimize_total_daily_feed_cost",
+    "objective_formula": "min sum_over_groups_feeds(group_count[group] * x[group,feed]/DM_fraction[feed] * cost_per_kg_as_fed[feed])",
+    "constraints": {
+      "group_dmi": {
+        "default_policy": "0.95*DMI_target <= sum_feed x[group,feed] <= 1.05*DMI_target",
+        "type": "software_policy_constraint",
+        "configurable": true
+      },
+      "inventory_hard_limit": {
+        "formula": "sum_over_groups(group_count[group] * x[group,feed]/DM_fraction[feed]) <= daily_available_as_fed_kg[feed]",
+        "type": "hard_constraint"
+      },
+      "feed_inclusion": {
+        "formula": "min_inclusion <= x[group,feed]/group_DMI <= max_inclusion where validated limits exist"
+      },
+      "energy": {
+        "adult_cow": "candidate ration must meet adult-cow NEL requirement after whole-diet validation",
+        "heifer": "candidate ration must meet heifer ME requirement after whole-diet validation"
+      },
+      "protein": {
+        "preferred": "MP_supply >= MP_requirement",
+        "fallback": "CP adequacy check only when MP calculation unavailable"
+      },
+      "minerals": "Required minerals must meet requirement without violating configured tolerable/safety limits.",
+      "fiber": "Apply validated NDF/fNDF/starch constraints for the animal class and ration type."
+    },
+    "do_not_use": {
+      "independent_animal_lp_without_shared_inventory": true,
+      "single_herd_ration_partitioned_only_by_dmi": true
+    },
+    "reason": "Animals with equal or similar DMI can have very different energy, protein, mineral and physiological requirements."
+  },
+  "fiber_and_starch_policy": {
+    "scientific_status": "diet_safety_rule_based_on_NASEM_guidance",
+    "do_not_use_single_rule": "forage_NDF >= 21% for every ration",
+    "example_minimum_total_ndf_matrix": [
+      {
+        "forage_ndf_percent_dm": 19,
+        "minimum_total_ndf_percent_dm": 25,
+        "maximum_starch_percent_dm": 30
+      },
+      {
+        "forage_ndf_percent_dm": 18,
+        "minimum_total_ndf_percent_dm": 27,
+        "maximum_starch_percent_dm": 28
+      },
+      {
+        "forage_ndf_percent_dm": 17,
+        "minimum_total_ndf_percent_dm": 29,
+        "maximum_starch_percent_dm": 26
+      },
+      {
+        "forage_ndf_percent_dm": 16,
+        "minimum_total_ndf_percent_dm": 31,
+        "maximum_starch_percent_dm": 24
+      },
+      {
+        "forage_ndf_percent_dm": 15,
+        "minimum_total_ndf_percent_dm": 33,
+        "maximum_starch_percent_dm": 22
+      }
+    ],
+    "implementation_note": "Use the complete validated ration fiber module where possible; the matrix is not a substitute for particle-size, forage quality and physically effective fiber evaluation."
+  },
+  "inventory_shortage_behavior": {
+    "if_feasible": "Return optimized ration within inventory.",
+    "if_infeasible": [
+      "Do not exceed inventory.",
+      "Return status='INFEASIBLE_WITH_CURRENT_INVENTORY'.",
+      "Identify limiting nutrients and feeds.",
+      "Calculate the nutrient shortfall under maximum feasible use of current feeds.",
+      "Run a purchase/augmentation scenario only from permitted candidate feeds.",
+      "Return additional purchase quantity required for each feed.",
+      "Never silently invent extra stock."
+    ],
+    "purchase_formula": "additional_purchase_as_fed_kg = max(0, required_as_fed_kg - daily_available_as_fed_kg)"
+  },
+  "balance_status_engine": {
+    "scientific_status": "software_policy_not_a_single_NASEM_equation",
+    "important_rule": "DMI adequacy alone can never produce status BALANCED.",
+    "default_thresholds_configurable": {
+      "DMI_percent_of_target": {
+        "min": 95,
+        "max": 105
+      },
+      "adult_energy_NEL_percent_of_requirement": {
+        "min": 95,
+        "max": 105
+      },
+      "heifer_energy_ME_percent_of_requirement": {
+        "min": 95,
+        "max": 105
+      },
+      "MP_percent_of_requirement": {
+        "min": 95,
+        "max": 110
+      },
+      "CP_percent_of_target_if_MP_unavailable": {
+        "min": 95,
+        "max": 110
+      },
+      "major_minerals": {
+        "minimum": "100% of requirement",
+        "maximum": "must remain below configured tolerable/safety upper limit"
+      },
+      "trace_minerals": {
+        "minimum": "meet validated requirement/adequate-intake target where defined",
+        "maximum": "must remain below configured tolerable/safety upper limit"
+      },
+      "fiber_and_starch": "must pass the configured validated ration structural-carbohydrate rules",
+      "inventory": "must be respected"
+    },
+    "status_priority": [
+      "INVALID_INPUT",
+      "INFEASIBLE_WITH_CURRENT_INVENTORY",
+      "UNSAFE_EXCESS",
+      "DEFICIENT",
+      "EXCESS",
+      "BALANCED"
+    ],
+    "classification_logic": {
+      "INVALID_INPUT": "Required inputs for the applicable scientific equation are missing or invalid.",
+      "INFEASIBLE_WITH_CURRENT_INVENTORY": "No ration can satisfy hard inventory plus essential nutrient constraints.",
+      "UNSAFE_EXCESS": "A nutrient exceeds a configured tolerable/safety limit.",
+      "DEFICIENT": "One or more essential nutrients are below minimum policy adequacy.",
+      "EXCESS": "Essential minimums are satisfied but one or more monitored nutrients exceed the preferred operating band without reaching a safety limit.",
+      "BALANCED": "All required DMI, energy, protein, mineral, fiber/starch, safety and inventory checks pass."
+    }
+  },
+  "adequacy_calculations": {
+    "generic": "adequacy_percent = supplied / required * 100",
+    "deficit": "deficit = max(0, required - supplied)",
+    "surplus": "surplus = max(0, supplied - required)",
+    "rules": [
+      "Do not calculate adequacy when requirement is zero or not defined.",
+      "Return null plus a reason instead of Infinity/NaN.",
+      "Keep requirement, supply, deficit/surplus and adequacy together in the same result object."
+    ]
+  },
+  "traceability_requirements": {
+    "every_calculated_value_must_include": [
+      "calculation_id or equation_id",
+      "input values used",
+      "units",
+      "raw result",
+      "rounded display result",
+      "scientific_status",
+      "warnings",
+      "source/reference label"
+    ],
+    "animal_energy_breakdown_required": [
+      "maintenance",
+      "milk",
+      "gestation",
+      "growth/frame growth if applicable",
+      "body reserve change if implemented",
+      "total"
+    ],
+    "mineral_breakdown_required": [
+      "natural_feed_supply",
+      "supplement_supply",
+      "total_supply",
+      "requirement",
+      "adequacy_percent",
+      "deficit_or_surplus"
+    ]
+  },
+  "agent_decision_rules": {
+    "never_invent_missing_feed_composition": true,
+    "never_invent_inventory": true,
+    "never_invent_animal_weight": true,
+    "never_invent_milk_yield": true,
+    "may_estimate_gestation_day_from_month": true,
+    "must_label_estimates": true,
+    "must_not_present_internal_policy_as_NASEM_equation": true,
+    "must_not_claim_balanced_when_any_essential_check_fails": true,
+    "must_explain_limiting_factor": true,
+    "must_keep_scientific_and_software_policy_fields_separate": true,
+    "if_formula_inputs_missing": {
+      "behavior": "Use only an explicitly defined fallback formula if one exists; otherwise return not_calculated and list missing inputs."
+    }
+  },
+  "deprecated_rules_to_remove_from_code": [
+    {
+      "rule": "lactating water = 15.99 + 1.58*DMI + 0.90*Milk + 0.05*BW*0.1",
+      "action": "remove as official formula"
+    },
+    {
+      "rule": "pregnant water = BW*0.09 then *1.44 heat stress",
+      "action": "remove as official formula"
+    },
+    {
+      "rule": "dry/heifer/bull water = BW*0.08 then *1.44 heat stress",
+      "action": "remove as official formula"
+    },
+    {
+      "rule": "heifer DMI = 0.026*BW",
+      "action": "replace with NASEM Eq 2-3/2-4 when applicable"
+    },
+    {
+      "rule": "dry cow DMI = 0.022*BW universally",
+      "action": "replace with dry/transition logic"
+    },
+    {
+      "rule": "pregnancy DMI = 0.024*BW*[0.95,0.88,0.78]",
+      "action": "replace with late-gestation NASEM equations when applicable"
+    },
+    {
+      "rule": "generic Ca/P values by green fodder, dry fodder and cake category",
+      "action": "remove; use feed-specific database"
+    },
+    {
+      "rule": "mineral mixture is ignored in 15-mineral total",
+      "action": "fix; include supplement contribution"
+    },
+    {
+      "rule": "each animal independently optimized without shared inventory",
+      "action": "replace with joint farm/group optimization"
+    },
+    {
+      "rule": "ration is Balanced when DMI is within +/-5%",
+      "action": "remove; use multi-nutrient balance status"
+    },
+    {
+      "rule": "heifer growth = fixed 2.5 Mcal/day",
+      "action": "remove"
+    },
+    {
+      "rule": "primiparous growth = maintenance*20%",
+      "action": "remove as universal growth formula"
+    },
+    {
+      "rule": "calf birth weight = mature BW*0.07 labeled as NASEM",
+      "action": "remove as authoritative; use expected calf birth weight or a validated breed/parity estimate"
+    }
+  ],
+  "output_schema": {
+    "per_animal_or_group": {
+      "identity": {
+        "animal_or_group_id": "string",
+        "category": "string",
+        "head_count": "number"
+      },
+      "targets": {
+        "dmi_kg_day": "number|null",
+        "energy_basis": "NEL|ME|null",
+        "energy_required_mcal_day": "number|null",
+        "mp_required_g_day": "number|null",
+        "water_fwi_l_day": "number|null",
+        "minerals_required": "object"
+      },
+      "ration": {
+        "feeds": [
+          {
+            "feed_id": "string",
+            "kg_dm_per_head_day": "number",
+            "kg_as_fed_per_head_day": "number",
+            "kg_as_fed_group_day": "number",
+            "cost_group_day": "number"
+          }
+        ],
+        "diet_profile": "object"
+      },
+      "supply": {
+        "dmi_kg_day": "number",
+        "energy": "object",
+        "protein": "object",
+        "minerals": "object"
+      },
+      "adequacy": "object",
+      "balance_status": "string",
+      "warnings": [
+        "string"
+      ],
+      "calculation_trace": [
+        "object"
+      ]
+    },
+    "farm_summary": {
+      "head_count": "number",
+      "total_feed_as_fed_kg_day": "number",
+      "total_feed_dm_kg_day": "number",
+      "total_water_l_day": "number|null",
+      "total_cost_day": "number",
+      "feed_inventory_use": "object",
+      "purchase_requirements": "object",
+      "limiting_nutrients": [
+        "string"
+      ],
+      "groups_not_balanced": [
+        "string"
+      ]
+    }
+  },
+  "example_trace_object": {
+    "metric": "DMI_target",
+    "equation_id": "NASEM_2021_EQ_2_1",
+    "scientific_status": "authoritative_equation",
+    "inputs": {
+      "Parity": 1,
+      "MilkE_Mcal_day": 20.5,
+      "BW_kg": 550,
+      "BCS": 3.0,
+      "DIM": 100
+    },
+    "result": {
+      "value": null,
+      "unit": "kg DM/day"
+    },
+    "note": "Agent/backend should populate the calculated value. Example inputs are illustrative and must not be used as farm data."
+  },
+  "validation_tests": [
+    {
+      "test_id": "CONSISTENCY_001",
+      "rule": "Animal table water total must equal KT water total when both aggregate the same animals and use the same final ration."
+    },
+    {
+      "test_id": "CONSISTENCY_002",
+      "rule": "Ca/P totals in animal, herd and 15-mineral tables must be derived from identical feed and supplement supply objects."
+    },
+    {
+      "test_id": "INVENTORY_001",
+      "rule": "No feed allocation may exceed daily available inventory after reserve/spoilage adjustments."
+    },
+    {
+      "test_id": "BALANCE_001",
+      "rule": "A ration with adequate DMI but deficient energy or protein must not be BALANCED."
+    },
+    {
+      "test_id": "GESTATION_001",
+      "rule": "If pregnancy month is used instead of insemination date, output must contain estimated_from_pregnancy_month warning."
+    },
+    {
+      "test_id": "WATER_001",
+      "rule": "No extra 1.44 heat multiplier may be applied after NASEM Eq 9-1 or 9-3 unless a separately configured validated model explicitly requires it."
+    },
+    {
+      "test_id": "ENERGY_001",
+      "rule": "Heifer ME requirement must not be mislabeled as adult-cow NEL."
+    },
+    {
+      "test_id": "SOURCE_001",
+      "rule": "Every official calculated target must expose its equation_id/source label."
+    }
+  ],
+  "references": [
+    {
+      "id": "NASEM2021_CH2",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 2 Dry Matter Intake",
+      "used_for": [
+        "Eq 2-1",
+        "Eq 2-3",
+        "Eq 2-4"
+      ]
+    },
+    {
+      "id": "NASEM2021_CH3",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 3 Energy",
+      "used_for": [
+        "maintenance NEL",
+        "milk energy",
+        "gestation",
+        "frame growth"
+      ]
+    },
+    {
+      "id": "NASEM2021_CH7",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 7 Minerals",
+      "used_for": [
+        "factorial mineral requirements",
+        "Ca maintenance",
+        "P system"
+      ]
+    },
+    {
+      "id": "NASEM2021_CH9",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 9 Water",
+      "used_for": [
+        "Eq 9-1",
+        "Eq 9-2",
+        "Eq 9-3"
+      ]
+    },
+    {
+      "id": "NASEM2021_CH11",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 11 Growth",
+      "used_for": [
+        "heifer ME and MP growth requirements"
+      ]
+    },
+    {
+      "id": "NASEM2021_CH12",
+      "name": "Nutrient Requirements of Dairy Cattle, 8th Revised Edition - Chapter 12 Dry and Transition Cows",
+      "used_for": [
+        "Eq 12-1",
+        "Eq 12-2"
+      ]
+    }
+  ]
+}
