@@ -8,6 +8,7 @@ Ruleset ID: dairy_feed_calculation_nasem2021_consistent_v1
 import os
 import json
 import math
+import re
 import logging
 from typing import Dict, Any, Optional, List, Tuple
 
@@ -431,6 +432,7 @@ class NASEM2021Calculator:
         """
         Searches the NASEM 2021 Unified Feed & Nutrition Ruleset for relevant equations,
         policies, constraints, and deprecated formulas.
+        Strictly guarded against clinical disease, veterinary symptom, or biosecurity questions.
         """
         q_lower = query.lower()
         results: Dict[str, Any] = {
@@ -439,36 +441,49 @@ class NASEM2021Calculator:
             "matches": []
         }
 
+        # Guard: If query is purely veterinary clinical, disease prevention, or biosecurity
+        clinical_guards = [
+            "disease", "diseases", "prevent", "prevention", "spread", "spreading",
+            "infection", "infectious", "biosecurity", "vaccin", "quarantine", "sick",
+            "symptom", "symptoms", "fever", "mastitis", "fmd", "bloat", "pathogen", "isolate",
+            "treatment", "medicine", "antibiotic", "parasite", "tick", "ticks", "scour", "scours"
+        ]
+        is_explicit_nasem = any(re.search(rf"\b{w}\b", q_lower) for w in ["nasem", "dmi", "fwi", "nel", "me", "mp", "equation"]) or ("ca eq" in q_lower)
+        is_clinical_query = any(re.search(rf"\b{w}\b", q_lower) for w in clinical_guards)
+
+        if is_clinical_query and not is_explicit_nasem:
+            return results
+
         # Check DMI
-        if any(w in q_lower for w in ["dmi", "dry matter intake", "intake", "feed intake", "eat"]):
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["dmi", "dry matter intake", "feed intake", "dm intake"]):
             results["matches"].append({
                 "category": "Dry Matter Intake (DMI)",
                 "rules": self.rules.get("dmi_engine")
             })
 
         # Check Water
-        if any(w in q_lower for w in ["water", "fwi", "thirst", "drink", "free water"]):
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["water", "fwi", "free water", "thirst", "drink"]):
             results["matches"].append({
                 "category": "Water Intake (FWI)",
                 "rules": self.rules.get("water_engine")
             })
 
         # Check Energy
-        if any(w in q_lower for w in ["energy", "nel", "me", "mcal", "calories", "lactation energy"]):
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["energy", "nel", "me", "mcal", "lactation energy", "net energy", "calories"]):
             results["matches"].append({
                 "category": "Energy Requirements (NEL / ME)",
                 "rules": self.rules.get("energy_requirement_engine")
             })
 
         # Check Minerals
-        if any(w in q_lower for w in ["mineral", "calcium", "phosphorus", "ca", "salt", "macro"]):
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["mineral", "minerals", "calcium", "phosphorus", "salt", "macro", "trace mineral"]) or re.search(r"\b(ca|p)\b", q_lower):
             results["matches"].append({
                 "category": "Mineral Engine (Factorial Ca/P)",
                 "rules": self.rules.get("mineral_engine")
             })
 
         # Check Optimization & Ration Balance
-        if any(w in q_lower for w in ["balance", "balanced", "ration", "optimize", "inventory", "protein", "mp"]):
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["balance", "balanced", "ration", "optimize", "tmr", "protein", "mp"]):
             results["matches"].append({
                 "category": "Ration Optimization & Balance Status",
                 "rules": {
@@ -478,12 +493,11 @@ class NASEM2021Calculator:
                 }
             })
 
-        # Always include deprecated formulas if looking for rules
-        if any(w in q_lower for w in ["deprecated", "rule", "formula", "standard", "nasem"]):
+        # Always include deprecated formulas if explicitly looking for rules
+        if any(re.search(rf"\b{w}\b", q_lower) for w in ["deprecated", "rule", "rules", "formula", "standard", "nasem"]):
             results["deprecated_rules_to_avoid"] = self.rules.get("deprecated_rules_to_remove_from_code")
 
-        if not results["matches"]:
-            # If broad question, provide top-level executive overview of NASEM 2021 ruleset
+        if not results["matches"] and (is_explicit_nasem or any(re.search(rf"\b{w}\b", q_lower) for w in ["feed", "dairy feed", "dairy nutrition", "feeding standard"])):
             results["matches"].append({
                 "category": "Unified NASEM 2021 Rules Overview",
                 "core_architecture_rules": self.rules.get("core_architecture_rules"),

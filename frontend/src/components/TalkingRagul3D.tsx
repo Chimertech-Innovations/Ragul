@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Mic, 
-  MicOff,
+  MicOff, 
   Volume2, 
   Sparkles, 
   AlertTriangle, 
   HeartPulse, 
   Wheat, 
   CheckCircle2, 
-  Ear,
-  Activity,
-  Milk,
-  Radio,
-  HelpCircle,
-  Clock,
-  Users
+  Ear, 
+  Activity, 
+  Milk, 
+  Radio
 } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
@@ -23,21 +20,53 @@ interface TalkingRagul3DProps {
   onSendQuery?: (query: string) => void;
 }
 
+// Clean raw markdown, bullet stars, emojis, and internal markers from spoken text
+export const cleanSpeechBubbleText = (raw?: string): string => {
+  if (!raw) return '';
+  let text = raw;
+  // 1. Strip code blocks or fences
+  text = text.replace(/```[\s\S]*?```/gi, '');
+  // 2. Strip ASCII diagram borders and lines
+  text = text.replace(/┌[\s\S]*?└[^\n]*/g, '');
+  text = text.replace(/^[│┌├└\+\|].*$/gm, '');
+  // 3. Strip all emojis and pictograms
+  text = text.replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '');
+  // 4. Strip all star symbols and asterisks (* or **)
+  text = text.replace(/\*+/g, '');
+  // 5. Strip bullet lists and markdown headers
+  text = text.replace(/^#+\s+/gm, '');
+  text = text.replace(/^[•\-\*]\s+/gm, '');
+  // 6. Clean meta headings
+  text = text.replace(/^\s*Current Cattle Dataset - /i, '');
+  text = text.replace(/^\s*Farm Herd Summary:\s*/i, '');
+  // 7. Collapse spaces and normalize
+  text = text.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  return text;
+};
+
 export const TalkingRagul3D: React.FC<TalkingRagul3DProps> = ({ onToggleMic, onSendQuery }) => {
-  const { isListening, isSpeaking, isProcessing, interrupted, messages } = useRagulStore();
+  const { 
+    isListening, 
+    isSpeaking, 
+    isProcessing, 
+    interrupted, 
+    messages
+  } = useRagulStore();
+
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isPoked, setIsPoked] = useState(false);
 
   // Latest assistant message for dynamic emotion & speech bubble
-  const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant')?.content;
+  const rawAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant')?.content;
+  const cleanSpokenMsg = cleanSpeechBubbleText(rawAssistantMsg);
 
   // Determine Dynamic Action & Mood from AI Response
   const getActionState = (): 'alert' | 'estrus' | 'nutrition' | 'greeting' | 'speaking' | 'listening' | 'thinking' | 'idle' => {
     if (isListening) return 'listening';
     if (isProcessing) return 'thinking';
-    if (!isSpeaking || !lastAssistantMsg) return 'idle';
+    if (!isSpeaking || !rawAssistantMsg) return 'idle';
     
-    const text = lastAssistantMsg.toLowerCase();
+    const text = rawAssistantMsg.toLowerCase();
 
     // Priority 1: Self-Introduction & Greetings
     if (
@@ -165,8 +194,8 @@ export const TalkingRagul3D: React.FC<TalkingRagul3DProps> = ({ onToggleMic, onS
         }`}
       />
 
-      {/* Floating Speech Bubble when Ragul explains / speaks */}
-      {isSpeaking && lastAssistantMsg && (
+      {/* Floating Clean Speech Bubble when Ragul explains */}
+      {isSpeaking && cleanSpokenMsg && (
         <div className={`tom-speech-bubble bubble-${actionState}`}>
           <div className="bubble-header">
             {actionState === 'alert' ? (
@@ -197,7 +226,7 @@ export const TalkingRagul3D: React.FC<TalkingRagul3DProps> = ({ onToggleMic, onS
             )}
           </div>
           <div className="bubble-body">
-            "{lastAssistantMsg.length > 240 ? `${lastAssistantMsg.slice(0, 240)}...` : lastAssistantMsg}"
+            "{cleanSpokenMsg.length > 220 ? `${cleanSpokenMsg.slice(0, 220)}...` : cleanSpokenMsg}"
           </div>
         </div>
       )}

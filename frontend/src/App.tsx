@@ -3,10 +3,10 @@ import { Header } from './components/Header';
 import { TalkingRagul3D } from './components/TalkingRagul3D';
 import { ConversationFeed } from './components/ConversationFeed';
 import { FarmTelemetryPanel } from './components/FarmTelemetryPanel';
-import { useRagulStore } from './store/useRagulStore';
+import { LeftDiagramPanel } from './components/LeftDiagramPanel';
+import { useRagulStore, ChatMessageItem } from './store/useRagulStore';
 import { audioController } from './services/audioEngine';
-import { Send, Mic, MicOff, X, MessageSquare, Activity, Sparkles } from 'lucide-react';
-
+import { Send, Mic, MicOff, X, MessageSquare, Activity, BarChart3 } from 'lucide-react';
 import { LoginModal } from './components/LoginModal';
 
 export const App: React.FC = () => {
@@ -15,6 +15,8 @@ export const App: React.FC = () => {
     return (localStorage.getItem('ragul_theme') as 'dark' | 'light') || 'dark';
   });
   const [isSideChatOpen, setIsSideChatOpen] = useState(false);
+  const [isLeftDiagramOpen, setIsLeftDiagramOpen] = useState(false);
+  const [activeDiagramMessage, setActiveDiagramMessage] = useState<ChatMessageItem | null>(null);
   const [activeSideTab, setActiveSideTab] = useState<'chat' | 'telemetry'>('chat');
 
   const {
@@ -83,6 +85,32 @@ export const App: React.FC = () => {
     }
 
     lastSentMessageRef.current = { text: rawMessage, time: now };
+
+    const isFarmStatusQuery = (text: string): boolean => {
+      if (!text) return false;
+      const lower = text.toLowerCase().trim();
+      const statusPhrases = [
+        'today status', "today's status", 'what is today status', "what's today status",
+        'what today status', 'today farm status', 'status today', 'farm status',
+        'yesterday status', "yesterday's status", 'what is yesterday status', "what's yesterday status",
+        'what yesterday status', 'yesterday farm status', 'status yesterday',
+        'today summary', 'yesterday summary', 'what happened today', 'what happened yesterday',
+        'what happned', 'what hapned', 'happned', 'hapned', 'happened',
+        'stausts', 'stiats', 'stauts', 'current status', 'overall status',
+        'today stausts', 'today stiats', 'what is today stausts', 'what is today stiats',
+        'yesterday stausts', 'yesterday stiats', 'what is yesterday stausts', 'what is yesterday stiats',
+        'farm activity', 'yesterday activity', 'today activity', 'yesterday data', 'today data',
+        'இன்றைய பண்ணை நிலவரம்', 'இன்றைய நிலவரம்', 'நேற்றைய பண்ணை நிலவரம்', 'நேற்றைய நிலவரம்', 'பண்ணை நிலவரம்', 'நிலவரம்',
+        'आज का स्टेटस', 'कल का स्टेटस', 'आज की स्थिति', 'कल की स्थिति', 'फार्म स्टेटस'
+      ];
+      if (statusPhrases.some(p => lower.includes(p))) return true;
+      if (lower.includes('status') || lower.includes('stausts') || lower.includes('stiats') || lower.includes('stauts') || lower.includes('happ') || lower.includes('activit')) {
+        if (lower.includes('today') || lower.includes('yesterday') || lower.includes('yester') || lower.includes('farm') || lower.includes('herd') || lower.length < 25) {
+          return true;
+        }
+      }
+      return false;
+    };
 
     // MANDATORY AUTHENTICATION CHECK: Only logged-in users can access the chatbot!
     if (!currentUser) {
@@ -163,12 +191,23 @@ export const App: React.FC = () => {
           setLoginModalOpen(true);
         }
 
-        addMessage({
+        const newAssistantMsg: ChatMessageItem = {
+          id: `msg_${Date.now()}`,
           role: 'assistant',
           content: data.response,
           tool_meta: data.tool_meta,
-          proof_images: data.proof_images || data.tool_meta?.proof_images || []
-        });
+          proof_images: data.proof_images || data.tool_meta?.proof_images || [],
+          timestamp: new Date().toISOString()
+        };
+
+        addMessage(newAssistantMsg);
+
+        // Automatically activate Left Diagram Panel ONLY when user asks for farm status (today or yesterday)
+        const isStatusQuery = isFarmStatusQuery(rawMessage) || Boolean(data.tool_meta?.is_status_query);
+        if (isStatusQuery) {
+          setIsLeftDiagramOpen(true);
+          setActiveDiagramMessage(newAssistantMsg);
+        }
 
         // Trigger Talking Animation & TTS Audio
         setSpeaking(true);
@@ -233,7 +272,6 @@ export const App: React.FC = () => {
       },
       onSilenceEnd: () => {
         console.log('[App] User speech query received. Querying backend while keeping microphone continuously armed for hands-free dialogue...');
-        // CRITICAL: Do NOT setListening(false)! Keep isListening true for continuous duplex dialogue!
       },
       onSpeechEnd: () => {
         console.log('[App] Assistant finished speaking. Keeping microphone listening for Sir...');
@@ -246,46 +284,28 @@ export const App: React.FC = () => {
         });
       },
       onNoiseAlert: (msg) => {
-        // Log to console rather than polluting user's chat feed
         console.warn(`[App] Ambient audio notice: ${msg}`);
       },
       onClapWake: () => {
-        if (!currentUser) return; // Do not wake mic if not logged in
+        if (!currentUser) return;
         if (!audioController.isSynthesizing) {
           console.log('[App] Clap detected! Activating listening mode...');
           audioController.startStreaming(sessionId).then(() => {
             setListening(true);
           }).catch((err) => {
-            console.warn('[App] Clap mic wake notice:', err);
+            console.warn('[App] Clap activation notice:', err);
           });
         }
-      },
-      onVadStatus: (status) => {
-        setVadStatus(status);
       }
     });
 
-    return () => {
-      audioController.stopStreaming();
-    };
-  }, [sessionId, triggerInterruption, setProcessing, setListening, setSpeaking, setVadStatus, currentUser]);
-
-  // Hands-free continuous duplex mode: Auto-arm mic on first user interaction so user doesn't need to manually click
-  useEffect(() => {
     const handleFirstUserInteraction = () => {
-      if (!currentUser) return; // Do not auto-arm mic for unauthenticated users!
-      if (!audioController.isListening && !isListening) {
-        console.log('[App] First user interaction detected. Auto-arming hands-free microphone...');
-        audioController.startStreaming(sessionId).then(() => {
-          setListening(true);
-        }).catch((err) => {
-          console.log('[App] Mic waiting for explicit user gesture:', err);
-        });
-      }
+      (audioController as any).resumeAudioContext?.();
+      window.removeEventListener('click', handleFirstUserInteraction);
+      window.removeEventListener('keydown', handleFirstUserInteraction);
     };
-
-    window.addEventListener('click', handleFirstUserInteraction, { once: true });
-    window.addEventListener('keydown', handleFirstUserInteraction, { once: true });
+    window.addEventListener('click', handleFirstUserInteraction);
+    window.addEventListener('keydown', handleFirstUserInteraction);
 
     return () => {
       window.removeEventListener('click', handleFirstUserInteraction);
@@ -322,15 +342,38 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className={`app-container ${isSideChatOpen ? 'drawer-open' : ''}`}>
-      {/* Top Header with Theme Switcher & Status */}
+    <div className={`app-container ${isSideChatOpen ? 'drawer-open' : ''} ${isLeftDiagramOpen ? 'left-diagram-open' : ''}`}>
+      {/* Top Header with Theme Switcher, Diagrams & Status */}
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
         isSideChatOpen={isSideChatOpen}
         onToggleSideChat={() => setIsSideChatOpen(!isSideChatOpen)}
         onOpenLogin={() => setLoginModalOpen(true)}
+        isLeftDiagramOpen={isLeftDiagramOpen}
+        onToggleLeftDiagram={() => setIsLeftDiagramOpen(!isLeftDiagramOpen)}
       />
+
+      {/* LEFT-SIDE APACHE ECHARTS DATA VISUALIZATION DRAWER */}
+      <LeftDiagramPanel
+        isOpen={isLeftDiagramOpen}
+        onClose={() => setIsLeftDiagramOpen(false)}
+        activeMessage={activeDiagramMessage}
+        theme={theme}
+        farmId={currentUser?.farm_id}
+      />
+
+      {/* Floating Trigger on Left Edge when Diagram Drawer is Closed */}
+      {!isLeftDiagramOpen && (
+        <button
+          onClick={() => setIsLeftDiagramOpen(true)}
+          className="floating-left-diagram-trigger"
+          title="Open Visual Diagrams & Charts"
+        >
+          <BarChart3 size={17} className="text-cyan-400" />
+          <span>Diagrams & Analytics</span>
+        </button>
+      )}
 
       {/* Login Modal for Farm Phone & Password Auth */}
       <LoginModal
@@ -340,7 +383,6 @@ export const App: React.FC = () => {
 
       {/* Main Workspace Layout */}
       <div className="main-workspace-grid">
-        {/* CENTER HERO STAGE: 3D Talking Ragul */}
         <main className="hero-stage-panel">
           <TalkingRagul3D
             onToggleMic={handleToggleMic}

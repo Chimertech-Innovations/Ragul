@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, MessageSquare, Radio, Sparkles, User, LogOut, KeyRound } from 'lucide-react';
+import { Sun, Moon, MessageSquare, Radio, Sparkles, User, LogOut, KeyRound, BarChart3 } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
 interface HeaderProps {
@@ -8,6 +8,8 @@ interface HeaderProps {
   isSideChatOpen: boolean;
   onToggleSideChat: () => void;
   onOpenLogin: () => void;
+  isLeftDiagramOpen?: boolean;
+  onToggleLeftDiagram?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +17,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   isSideChatOpen,
   onToggleSideChat,
-  onOpenLogin
+  onOpenLogin,
+  isLeftDiagramOpen,
+  onToggleLeftDiagram
 }) => {
   const { messages, isListening, isSpeaking, currentUser, setCurrentUser, addMessage } = useRagulStore();
 
@@ -79,6 +83,17 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-controls">
+        {onToggleLeftDiagram && (
+          <button
+            onClick={onToggleLeftDiagram}
+            className={`side-chat-btn ${isLeftDiagramOpen ? 'active' : ''}`}
+            title="Toggle Visual Diagrams & Analytics"
+          >
+            <BarChart3 size={17} />
+            <span className="chat-btn-label">Diagrams</span>
+          </button>
+        )}
+
         <button
           onClick={onToggleTheme}
           className="theme-toggle-btn"
@@ -91,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onToggleSideChat}
           className={`side-chat-btn ${isSideChatOpen ? 'active' : ''}`}
-          title="Toggle Chat & Telemetry Panel"
+          title="Toggle Chat Panel"
         >
           <MessageSquare size={17} />
           <span className="chat-btn-label">Chat Panel</span>

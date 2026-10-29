@@ -25,10 +25,10 @@ class SileroVADProcessor:
         energy_threshold: float = None
     ):
         self.sample_rate = sample_rate or getattr(settings, "VAD_SAMPLE_RATE", 16000)
-        self.threshold = threshold if threshold is not None else getattr(settings, "VAD_THRESHOLD", 0.58)
-        min_speech_ms = min_speech_duration_ms if min_speech_duration_ms is not None else getattr(settings, "VAD_MIN_SPEECH_DURATION_MS", 250)
-        min_silence_ms = min_silence_duration_ms if min_silence_duration_ms is not None else getattr(settings, "VAD_MIN_SILENCE_DURATION_MS", 800)
-        self.energy_threshold = energy_threshold if energy_threshold is not None else getattr(settings, "VAD_ENERGY_THRESHOLD", 0.022)
+        self.threshold = threshold if threshold is not None else getattr(settings, "VAD_THRESHOLD", 0.65)
+        min_speech_ms = min_speech_duration_ms if min_speech_duration_ms is not None else getattr(settings, "VAD_MIN_SPEECH_DURATION_MS", 280)
+        min_silence_ms = min_silence_duration_ms if min_silence_duration_ms is not None else getattr(settings, "VAD_MIN_SILENCE_DURATION_MS", 3000)
+        self.energy_threshold = energy_threshold if energy_threshold is not None else getattr(settings, "VAD_ENERGY_THRESHOLD", 0.038)
 
         self.window_size_samples = 512 if self.sample_rate == 16000 else 256
         # Frame duration at 16kHz = 512 / 16000 = 32ms

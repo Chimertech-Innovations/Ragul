@@ -2,6 +2,7 @@ import os
 import datetime
 import json
 import logging
+import re
 from typing import Dict, Any, List, Optional
 from ..database.supabase_client import supabase_db
 from ..knowledge.rag_engine import rag_engine
@@ -181,14 +182,14 @@ async def get_farm_overview(farm_id: Optional[str] = None, target_date: Optional
                 "image_url": f"/api/media/image?path={img_p}" if img_p else None
             })
 
-    # 3. Active Estrus Detections (>85% Confidence)
+    # 3. Active Estrus Detections (>=80% Confidence)
     active_estrus_alerts = []
     seen_estrus_cows = set()
     for r in target_rows:
         if r.get("activity_type") == "estrus_detected":
             c_id = r.get("cattle_id")
-            conf_val = float(r.get("confidence_score") or 0)
-            if conf_val > 0.85 and c_id not in seen_estrus_cows:
+            conf_val = float(r.get("confidence_score") or 0.85)
+            if conf_val >= 0.80 and c_id not in seen_estrus_cows:
                 seen_estrus_cows.add(c_id)
                 img_p = r.get("captured_image_storage_path")
                 active_estrus_alerts.append({
@@ -197,7 +198,7 @@ async def get_farm_overview(farm_id: Optional[str] = None, target_date: Optional
                     "confidence": f"{round(conf_val * 100)}%",
                     "camera_id": r.get("camera_id", "CAM01"),
                     "time": _fmt_time(r.get("start_time")),
-                    "description": r.get("description"),
+                    "description": r.get("description") or "Mounting / Standing Heat Detected",
                     "image_url": f"/api/media/image?path={img_p}" if img_p else None
                 })
 
@@ -215,10 +216,40 @@ async def get_farm_overview(farm_id: Optional[str] = None, target_date: Optional
         if b.get("image_url") and len(proof_images) < 5:
             proof_images.append(b)
 
+    # If proof_images has fewer than 4 images, only include photos from target_rows (that day's detections)
+    if len(target_rows) > 0 and len(proof_images) < 4:
+        for r in target_rows:
+            img_p = r.get("captured_image_storage_path")
+            if img_p and not any(p.get("image_url") == f"/api/media/image?path={img_p}" for p in proof_images):
+                conf_val = float(r.get("confidence_score") or 0.90)
+                proof_images.append({
+                    "activity_id": str(r["activity_id"]),
+                    "cattle_id": r.get("cattle_id") or "Cattle",
+                    "camera_id": r.get("camera_id") or "CAM01",
+                    "time": _fmt_time(r.get("start_time")),
+                    "confidence": f"{round(conf_val * 100)}%",
+                    "description": r.get("description") or "CCTV Detection Proof",
+                    "image_url": f"/api/media/image?path={img_p}"
+                })
+                if len(proof_images) >= 4:
+                    break
+
+    # If that day has 0 detections recorded, strictly return NO proof images (never show images from other days)
+    if len(target_rows) == 0:
+        proof_images = []
+
     selected_date_label = (
         f"Today ({now_ist.strftime('%d %b %Y')})" if is_today
         else (f"Yesterday ({(now_ist - datetime.timedelta(days=1)).strftime('%d %b %Y')})" if is_yesterday else f"Overview ({now_ist.strftime('%d %b %Y')})")
     )
+
+    # Sorted cattle detections for that day's graph
+    cattle_cnt_map = {}
+    for r in target_rows:
+        cid = r.get("cattle_id")
+        if cid:
+            cattle_cnt_map[cid] = cattle_cnt_map.get(cid, 0) + 1
+    cattle_details = [{"cattle_id": k, "events_count": v} for k, v in sorted(cattle_cnt_map.items(), key=lambda x: x[1], reverse=True)]
 
     return {
         "source": "Supabase PostgreSQL (Live PashuX)",
@@ -232,6 +263,7 @@ async def get_farm_overview(farm_id: Optional[str] = None, target_date: Optional
         "date_label": selected_date_label,
         "monitored_cattle_count": len(cows),
         "cattle_list": cows,
+        "cattle_details": cattle_details,
         "is_today_query": is_today,
         "today_detections_count": len(today_rows),
         "today_estrus_count": len(today_estrus),
@@ -323,8 +355,8 @@ async def get_estrus_and_heat_alerts(
         }
         alerts.append(alert_item)
 
-        # STRICT MANDATE: Only show images with confidence > 85% (>0.85)
-        if img_p and conf_float > min_confidence and len(proof_images) < 4:
+        # Show verified images with confidence >= 80% (>=0.80)
+        if img_p and conf_float >= 0.80 and len(proof_images) < 4:
             proof_images.append({
                 "activity_id": str(r["activity_id"]),
                 "cattle_id": cid,
@@ -344,7 +376,26 @@ async def get_estrus_and_heat_alerts(
         "total_estrus_events": len(alerts),
         "cows_in_heat": list(affected_cows),
         "latest_alerts": alerts,
-        "recommendation": "Separate the cows in heat for breeding inspection. Check for clear discharge and standing heat signs." if alerts else "No active estrus detected.",
+        "recommendation": (
+            "Separate the cows in heat for breeding inspection. Check for clear discharge and standing heat signs. "
+            "We recommend verifying the cervix and performing precise, non-traumatic insemination using the Chimertech Visual AI Insemination Gun with HD Camera, "
+            "and monitoring the 12-18 hour insemination window with the Chimertech Estrus Detection Kit (available on chimertech.shop)."
+            if alerts else
+            "No active estrus detected for this date. For automated 24/7 standing heat tracking and accurate visual breeding, "
+            "use the Chimertech Estrus Detection Kit and Chimertech Visual AI Insemination Gun (chimertech.shop)."
+        ),
+        "recommended_products": [
+            {
+                "name": "Chimertech Visual AI Insemination Gun with HD Camera",
+                "url": "https://chimertech.shop",
+                "purpose": "Visual cervical examination and precise non-traumatic artificial insemination"
+            },
+            {
+                "name": "Chimertech Smart Bovine Estrus Detection Kit",
+                "url": "https://chimertech.shop",
+                "purpose": "Automated standing heat detection and tracking the optimal 12-18 hour insemination window"
+            }
+        ],
         "proof_images": proof_images
     }
 
@@ -462,8 +513,8 @@ async def get_cctv_proof_and_images(
     for r in rows:
         conf_val = float(r.get("confidence_score") or 0.85)
         act_type = r.get("activity_type") or ""
-        # Strict user mandate: Estrus proof images MUST have confidence > 85%
-        if "estrus" in act_type and conf_val <= 0.85:
+        # Strict user mandate: Estrus proof images MUST have confidence >= 80%
+        if "estrus" in act_type and conf_val < 0.80:
             continue
 
         img_p = r.get("captured_image_storage_path")
@@ -841,6 +892,18 @@ async def calculate_nasem_dairy_nutrition_and_feed(
     from app.knowledge.nasem_calculator import nasem_calculator
     f_id = await _resolve_farm_id(farm_id)
 
+    # Clinical & Biosecurity Guard: If clinical disease query sent here, redirect to veterinary_and_products_rag
+    if action == "query_rules" and query:
+        q_low = query.lower()
+        is_clinical = any(re.search(rf"\b{w}\b", q_low) for w in [
+            "disease", "diseases", "prevent", "prevention", "spread", "spreading",
+            "infection", "infectious", "biosecurity", "quarantine", "sick", "symptom",
+            "fever", "mastitis", "fmd", "bloat", "pathogen", "isolate"
+        ])
+        is_nasem_math = any(re.search(rf"\b{w}\b", q_low) for w in ["dmi", "fwi", "nel", "me", "mp", "equation", "ca eq"])
+        if is_clinical and not is_nasem_math:
+            return await veterinary_and_products_rag(query=query, farm_id=farm_id)
+
     # If cattle_id is provided, fetch actual cow parameters from DB
     if cattle_id and (bw_kg is None or bcs is None):
         cow = await supabase_db.fetch_one(
@@ -1204,31 +1267,6 @@ async def get_farm_herd_summary(farm_id: Optional[str] = None) -> Dict[str, Any]
         WHERE farm_id = $1::uuid;
     """, f_id)
 
-    chart_labels = [b["breed"] for b in breeds]
-    chart_values = [int(b["count"]) for b in breeds]
-    chart_data = {
-        "type": "donut",
-        "title": "Herd Breed Distribution",
-        "unit": "Cattle",
-        "labels": chart_labels,
-        "values": chart_values
-    }
-
-    diagram_lines = [
-        "📊 **Breed Breakdown Diagram:**",
-        "┌────────────────────────┬───────┬────────────────────────────────┐",
-        "│ Breed                  │ Count │ Diagrammatic Visual Share      │",
-        "├────────────────────────┼───────┼────────────────────────────────┤"
-    ]
-    for b in breeds:
-        cnt = int(b["count"])
-        pct = round((cnt / (total_cows or 1)) * 100)
-        bar_len = max(1, round(pct / 4))
-        bar = "█" * bar_len
-        diagram_lines.append(f"│ {b['breed']:<22} │ {cnt:>2}    │ {bar:<15} {pct}%        │")
-    diagram_lines.append("└────────────────────────┴───────┴────────────────────────────────┘")
-    ascii_diagram = "\n".join(diagram_lines)
-
     return {
         "source": "Supabase public.cattle, public.cameras, public.workers",
         "farm_id": f_id,
@@ -1239,9 +1277,7 @@ async def get_farm_herd_summary(farm_id: Optional[str] = None) -> Dict[str, Any]
         "active_cameras_count": len(cameras),
         "active_cameras": [dict(c) for c in cameras],
         "workers_registered_count": len(workers),
-        "workers": [dict(w) for w in workers],
-        "chart_data": chart_data,
-        "ascii_diagram": ascii_diagram
+        "workers": [dict(w) for w in workers]
     }
 
 async def get_single_day_cattle_graphical_analytics(
@@ -1310,32 +1346,6 @@ async def get_single_day_cattle_graphical_analytics(
     peak_cnt = max(values) if values else 0
     unique_cows_cnt = len(sorted_cows)
 
-    diagram_lines = [
-        f"📊 **{day_name}'s Cattle Activity Diagram ({date_label}):**",
-        "┌────────────┬────────────┬─────────────────────────────┬───────────────────────────┐",
-        "│ Cattle ID  │ Detections │ Graphical Diagram           │ Activity & Breed          │",
-        "├────────────┼────────────┼─────────────────────────────┼───────────────────────────┤"
-    ]
-    for c in sorted_cows:
-        cid = c["cattle_id"]
-        cnt = c["events_count"]
-        b_name = c["breed"]
-        bar_len = int(round((cnt / (peak_cnt or 1)) * 20))
-        bar = "█" * max(4, bar_len)
-        tag = "🔥 Active Estrus Mounting" if c["has_estrus"] else (f"{b_name} (Peak)" if cnt == peak_cnt and peak_cnt > 1 else b_name)
-        diagram_lines.append(f"│ {cid:<10} │ {cnt:>2} Events   │ {bar:<21} {cnt:>2} │ {tag:<25} │")
-    diagram_lines.append("└────────────┴────────────┴─────────────────────────────┴───────────────────────────┘")
-    ascii_diagram = "\n".join(diagram_lines)
-
-    chart_data = {
-        "type": "bar",
-        "title": f"{day_name} Cattle Detections ({date_label})",
-        "unit": "Detections",
-        "labels": labels or ["No Events"],
-        "values": values or [0],
-        "subtitle": f"{total_events} Total AI Vision Events • {unique_cows_cnt} Cattle Detected • Peak: {sorted_cows[0]['cattle_id'] if sorted_cows else 'None'} ({peak_cnt} Detections)"
-    }
-
     return {
         "source": "Supabase public.farm_activities Ground Truth",
         "farm_id": f_id,
@@ -1347,9 +1357,7 @@ async def get_single_day_cattle_graphical_analytics(
         "peak_detections": peak_cnt,
         "peak_cow": sorted_cows[0] if sorted_cows else None,
         "cattle_details": sorted_cows,
-        "estrus_alerts": list(set(estrus_cows)),
-        "chart_data": chart_data,
-        "ascii_diagram": ascii_diagram
+        "estrus_alerts": list(set(estrus_cows))
     }
 
 async def get_cattle_count_analytics(farm_id: Optional[str] = None, days: int = 7) -> Dict[str, Any]:
@@ -1402,31 +1410,6 @@ async def get_cattle_count_analytics(farm_id: Optional[str] = None, days: int = 
     peak_val = max(values) if values else 0
     avg_val = round(sum(values) / len(values), 1) if values else 0.0
 
-    diagram_lines = [
-        "📊 **Cattle Count Timeline (Last Days):**",
-        "┌────────────────┬──────────────┬────────────────────────────────┐",
-        "│ Date           │ Cattle Count │ Graphical Diagram              │",
-        "├────────────────┼──────────────┼────────────────────────────────┤"
-    ]
-    for p in daily_points:
-        lbl = p["label"]
-        cnt = p["cattle_count"]
-        bar_len = int(round((cnt / (peak_val or 1)) * 24)) if peak_val > 0 else 0
-        bar = "█" * max(1, bar_len) if cnt > 0 else " "
-        is_peak = " (Peak)" if cnt == peak_val and peak_val > 0 else ""
-        diagram_lines.append(f"│ {lbl:<14} │ {cnt:>2} Cattle    │ {bar:<24} {cnt}{is_peak} │")
-    diagram_lines.append("└────────────────┴──────────────┴────────────────────────────────┘")
-    ascii_diagram = "\n".join(diagram_lines)
-
-    chart_data = {
-        "type": "bar",
-        "title": "Cattle Count Over Last Days",
-        "unit": "Cattle",
-        "labels": labels,
-        "values": values,
-        "subtitle": f"Ground Truth Database Monitoring • Average: {avg_val} Cattle • Peak: {peak_val} Cattle"
-    }
-
     return {
         "source": "Supabase public.farm_activities & public.cattle Ground Truth",
         "farm_id": f_id,
@@ -1435,9 +1418,7 @@ async def get_cattle_count_analytics(farm_id: Optional[str] = None, days: int = 
         "average_daily_count": avg_val,
         "peak_count": peak_val,
         "daily_timeline": daily_points,
-        "trend_summary": f"Your herd telemetry over {len(labels)} recorded days reflects authentic database logs with an average of {avg_val} cattle detected daily and a peak of {peak_val} cattle.",
-        "chart_data": chart_data,
-        "ascii_diagram": ascii_diagram
+        "trend_summary": f"Your herd telemetry over {len(labels)} recorded days reflects authentic database logs with an average of {avg_val} cattle detected daily and a peak of {peak_val} cattle."
     }
 
 async def get_sick_cattle_and_health_warnings(farm_id: Optional[str] = None) -> Dict[str, Any]:
@@ -1683,7 +1664,7 @@ FARM_TOOLS = {
     },
     "veterinary_and_products_rag": {
         "function": veterinary_and_products_rag,
-        "description": "Query veterinary clinical knowledge, animal diseases (mastitis, fever, bloat, FMD), cattle nutrition, feed ingredients (rice straw, silage, green fodder, bypass fat, mineral mix, TMR ration), milk yield improvement, and veterinary test kits or medicine.",
+        "description": "Query veterinary clinical knowledge, cattle diseases (mastitis, fever, bloat, FMD, lumpy skin, diarrhea), disease prevention and farm biosecurity protocols, quarantine, contagious infections, immediate clinical first-aid actions, and Chimertech veterinary test kits or supportive care products. ALWAYS use this tool for all animal health, disease prevention, and biosecurity questions.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1695,7 +1676,7 @@ FARM_TOOLS = {
     },
     "calculate_nasem_dairy_nutrition_and_feed": {
         "function": calculate_nasem_dairy_nutrition_and_feed,
-        "description": "Calculate or query authoritative NASEM 2021 dairy cattle nutrition, Dry Matter Intake (DMI via Eq 2-1, 2-3, 12-1), Free Water Intake (FWI via Eq 9-1, 9-3), Net Energy of Lactation (NEL via Eq 3-13, 3-14b/c, 3-18), Metabolizable Energy for heifers (ME via Eq 11-2, 3-20), Metabolizable Protein (MP), factorial Calcium/Phosphorus requirements, mineral mixture dosing based on deficit, and unified ration optimization balance status.",
+        "description": "Calculate or query authoritative NASEM 2021 dairy cattle nutrition, Dry Matter Intake (DMI via Eq 2-1, 2-3, 12-1), Free Water Intake (FWI via Eq 9-1, 9-3), Net Energy of Lactation (NEL via Eq 3-13, 3-14b/c, 3-18), Metabolizable Energy for heifers (ME via Eq 11-2, 3-20), Metabolizable Protein (MP), factorial Calcium/Phosphorus requirements, mineral mixture dosing based on deficit, and unified ration optimization balance status. DO NOT USE for cattle diseases, veterinary questions, disease prevention, symptoms, infection, or biosecurity.",
         "parameters": {
             "type": "object",
             "properties": {

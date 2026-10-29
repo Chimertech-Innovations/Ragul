@@ -38,10 +38,10 @@ class Settings(BaseSettings):
     
     # VAD Settings (Silero VAD)
     VAD_SAMPLE_RATE: int = 16000
-    VAD_THRESHOLD: float = 0.58
-    VAD_MIN_SPEECH_DURATION_MS: int = 250
-    VAD_MIN_SILENCE_DURATION_MS: int = 800
-    VAD_ENERGY_THRESHOLD: float = 0.022
+    VAD_THRESHOLD: float = 0.65
+    VAD_MIN_SPEECH_DURATION_MS: int = 280
+    VAD_MIN_SILENCE_DURATION_MS: int = 3000
+    VAD_ENERGY_THRESHOLD: float = 0.038
     
     # TTS Settings
     TTS_ENGINE: str = "browser_native"

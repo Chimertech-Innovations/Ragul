@@ -96,15 +96,19 @@ const getInitialUser = (): UserProfile | null => {
   }
 };
 
+const initialUser = getInitialUser();
+
 export const useRagulStore = create<RagulState>((set) => ({
   sessionId: localStorage.getItem('ragul_session_id') || `session_${Math.random().toString(36).substring(2, 11)}`,
-  currentUser: getInitialUser(),
+  currentUser: initialUser,
   isLoginModalOpen: false,
   messages: [
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: 'Hello Sir! I\'m RAGUL, your PashuX AI Dairy Farm Supervisor. Please log in with your phone number and password to view and discuss your live farm cameras, estrus detection, and cattle activities.',
+      content: initialUser
+        ? "Hello Sir! I am RAGUL, your PashuX AI Dairy Farm Supervisor. How can I help you and your herd today, Sir?"
+        : "Hello Sir! I'm RAGUL, your PashuX AI Dairy Farm Supervisor. Please log in with your phone number and password to view and discuss your live farm cameras, estrus detection, and cattle activities.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ],
@@ -126,21 +130,37 @@ export const useRagulStore = create<RagulState>((set) => ({
     } else {
       localStorage.removeItem('ragul_user');
     }
-    set({ currentUser });
+    set((state) => {
+      // If the only message is the unauthenticated login prompt, replace with warm welcome
+      let updatedMessages = state.messages;
+      if (currentUser && state.messages.length === 1 && state.messages[0].id === 'welcome-1') {
+        updatedMessages = [
+          {
+            id: 'welcome-1',
+            role: 'assistant',
+            content: `Hello ${currentUser.full_name || 'Sir'}! I am **RAGUL**, your PashuX AI Dairy Farm Supervisor. How can I help you and your herd today, Sir?`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ];
+      }
+      return { currentUser, messages: updatedMessages };
+    });
   },
 
   setLoginModalOpen: (isLoginModalOpen) => set({ isLoginModalOpen }),
 
-  addMessage: (msg) => set((state) => ({
-    messages: [
-      ...state.messages,
-      {
-        ...msg,
-        id: Math.random().toString(36).substring(2, 9),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]
-  })),
+  addMessage: (msg) => {
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          ...msg,
+          id: Math.random().toString(36).substring(2, 9),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]
+    }));
+  },
 
   setListening: (isListening) => set({ isListening }),
   setSpeaking: (isSpeaking) => set({ isSpeaking }),

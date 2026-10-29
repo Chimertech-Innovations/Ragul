@@ -152,6 +152,73 @@ class AgentRouter:
             security_resp = await self._generate_security_privacy_response(user_text, farm_id)
             return security_resp, {"executed": True, "tool": "farm_security_and_privacy"}
 
+        # FAST-PATH FOR FARM STATUS / OVERVIEW QUERIES (<50ms INSTANT GROUND-TRUTH RESPONSE)
+        status_triggers = [
+            "today status", "today's status", "what is today status", "what's today status",
+            "what is today's status", "what today status", "today farm status", "status today",
+            "yesterday status", "yesterday's status", "what is yesterday status", "what's yesterday status",
+            "what is yesterday's status", "what yesterday status", "yesterday farm status", "status yesterday",
+            "yesterday status in farm", "today status in farm", "status in farm", "status of farm", "farm status",
+            "today summary", "yesterday summary", "what happened today", "what happened yesterday",
+            "what happened", "what happned", "what hapned", "happned", "hapned", "happened",
+            "stausts", "stiats", "stauts", "what is today stausts", "what is today stiats",
+            "what is yesterday stausts", "what is yesterday stiats",
+            "farm activity", "farm activities", "yesterday activity", "today activity", "yesterday data", "today data",
+            "current farm status", "herd status today", "herd status yesterday", "live status", "today live status",
+            "இன்றைய பண்ணை நிலவரம்", "இன்றைய நிலவரம்", "நேற்றைய பண்ணை நிலவரம்", "நேற்றைய நிலவரம்", "பண்ணை நிலவரம்", "நிலவரம்",
+            "आज का स्टेटस", "कल का स्टेटस", "आज की स्थिति", "कल की स्थिति", "फार्म स्टेटस"
+        ]
+        is_yesterday_requested = any(w in lower_u for w in ["yesterday", "yester", "நேற்று", "कल"])
+        target_date_requested = "yesterday" if is_yesterday_requested else "today"
+
+        is_farm_status = any(phrase in lower_u for phrase in status_triggers) or (
+            ("status" in lower_u or "stausts" in lower_u or "stiats" in lower_u or "stauts" in lower_u or "happ" in lower_u or "activit" in lower_u) and any(w in lower_u for w in ["today", "yesterday", "yester", "farm", "herd", "now", "இன்று", "நேற்று", "பண்ணை"])
+        )
+        if is_farm_status:
+            logger.info(f"[FastPath] Immediate Ground-Truth Farm Overview dispatched for '{user_text}' with target_date='{target_date_requested}'")
+            tool_spec = FARM_TOOLS.get("get_farm_overview")
+            if tool_spec:
+                tool_result = await tool_spec["function"](farm_id=farm_id, target_date=target_date_requested)
+                direct_summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text)
+                ret_proofs = tool_result.get("proof_images", []) if tool_result.get("total_activities_detected", 0) > 0 else []
+                return direct_summary, {
+                    "executed": True,
+                    "tool": "get_farm_overview",
+                    "result": tool_result,
+                    "proof_images": ret_proofs,
+                    "is_status_query": True
+                }
+
+        # FAST-PATH FOR CCTV PROOF / IMAGE QUERIES (<50ms INSTANT PHOTO EVIDENCE)
+        is_image_proof_req = any(w in lower_u for w in ["proof", "image", "photo", "pic", "picture", "snapshot", "evidence", "படம்", "ஆதாரம்", "புகைப்படம்", "तस्वीर", "सबूत"])
+        if is_image_proof_req:
+            logger.info(f"[FastPath] Immediate CCTV Proof Query dispatched for '{user_text}'")
+            req_act = None
+            if any(w in lower_u for w in ["mount", "heat", "estrus", "breeding", "சினைப்பருவம்"]):
+                req_act = "estrus"
+            elif any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
+                req_act = "feeding"
+            elif any(w in lower_u for w in ["sick", "disease", "mastitis", "bcs", "நோய்"]):
+                req_act = "disease"
+
+            cow_match = re.search(r'\b(cow\s*\d+|cow\d+|cattle\s*#?\d+)\b', lower_u)
+            target_cow = None
+            if cow_match:
+                raw_cow = cow_match.group(1).replace(" ", "").upper()
+                digits = re.findall(r'\d+', raw_cow)
+                target_cow = f"COW{int(digits[0]):03d}" if digits else raw_cow
+
+            tool_spec = FARM_TOOLS.get("get_cctv_proof_and_images")
+            if tool_spec:
+                tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow, activity_type=req_act)
+                direct_summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text)
+                return direct_summary, {
+                    "executed": True,
+                    "tool": "get_cctv_proof_and_images",
+                    "result": tool_result,
+                    "proof_images": tool_result.get("proof_images", [])
+                }
+
         # Autonomous AI Agent Reasoning & Dynamic Tool Dispatching
         messages = build_agent_messages(history, user_text)
 
@@ -227,21 +294,17 @@ class AgentRouter:
                     f"Retrieved Farm Vision & Telemetry Data for '{tool_name}':\n"
                     f"{json.dumps(tool_result, default=str, ensure_ascii=False)}\n\n"
                     "FORMATTING & ACCURACY REQUIREMENTS:\n"
-                    "1. STRICT TEMPORAL ACCURACY: If user asked for TODAY, report ONLY events that happened today ({today_str}). If 0 events happened today, state clearly that 0 events occurred today. NEVER report yesterday's events as today's!\n"
+                    "1. STRICT TEMPORAL ACCURACY: If user asked for TODAY, report ONLY today's data ({today_str}). If 0 events, state clearly 0 events. NEVER mix dates.\n"
                     "2. ANSWER ONLY WHAT WAS ASKED: Give a direct, concise answer.\n"
-                    "3. TODAY'S STATUS / OVERVIEW:\n"
-                    "   If reporting today's status or farm overview, report all 4 vital categories from data:\n"
-                    "   • 📊 **Herd Telemetry & Vision Summary:** Total detections and herd size.\n"
-                    "   • ⚠️ **Suspected Disease Alerts:** Any animal in `suspected_diseases` (e.g. COW257 with Lumpy Skin Disease), with camera, confidence, and isolation note.\n"
-                    "   • 📉 **Low BCS Warnings (BCS < 2.0):** Any animal in `low_bcs_cattle` (e.g. COW117 at 1.3, COW019 at 1.6, COW054 at 1.7) with exact BCS score out of 5.0.\n"
-                    "   • 🔥 **Active Estrus Detections (>85% Confidence):** Detections in `active_estrus_alerts`.\n"
-                    "   • 🌾 **Manger Feeding:** Feed alley activity.\n"
-                    "4. FEEDING TIME & REASONS: If asked about feeding time and why, provide BOTH 🌅 **Optimal Morning Feeding Time** (05:00 AM – 07:30 AM) and 🌾 **Optimal Evening Feeding Time** (05:00 PM – 07:00 PM) with scientific reasons.\n"
-                    "5. ESTRUS CONFIDENCE THRESHOLD: For estrus/heat alerts or proof images, ONLY report or show detections with >85% confidence score.\n"
-                    "6. NO LONG PARAGRAPHS: Keep explanations fast and structured using clean bullet points (•) and bold key items (**COW001**, **CAM01**, **90% Confidence**).\n"
-                    "7. Group into sections with short emoji headers (e.g. 📊 **Today's Farm Summary:**, 🔥 **Estrus / Heat Detection:**).\n"
+                    "3. MANDATORY BOLD FORMATTING: Wrap ALL headings, cattle IDs, camera IDs, numbers, keywords, dates, and metrics in **double asterisks**.\n"
+                    "   Example: • **Milk Production:** **No data** available for **25 Oct 2026**. **24 cattle** monitored on **CAM01** and **CAM02**.\n"
+                    "4. Use clean bullet points (•) with bold key items. NEVER output plain unformatted text.\n"
+                    "5. USE MARKDOWN TABLES for structured data (cost breakdowns, comparisons, metrics with multiple columns). Format: | **Header** | **Value** | with separator row |---|---|\n"
+                    "6. Keep response concise. No long paragraphs.\n"
+                    "7. ESTRUS CONFIDENCE THRESHOLD: Only report estrus detections with >85% confidence.\n"
                     f"8. {'Mention that CCTV capture proof images are displayed below in your chat gallery.' if proof_images else ''}\n"
-                    "9. GROUND TRUTH: ONLY report what exists in the retrieved database data above! Never invent or hallucinate data."
+                    "9. GROUND TRUTH: ONLY report what exists in the retrieved database data. Never invent or hallucinate data.\n"
+                    "10. CHIMERTECH PRODUCT INTEGRATION: If the question is about estrus, mounting, breeding, or artificial insemination, mention that Chimertech has the **Chimertech Visual AI Insemination Gun with HD Camera** (to inspect the cervix and perform precise insemination) and **Chimertech Estrus Detection Kit** available on **chimertech.shop**. If about mastitis, mention **Chimertech Quadmastest** and **CMT Kit**."
                 )
                 synthesis_messages.append({"role": "user", "content": synthesis_prompt})
 
@@ -646,25 +709,22 @@ class AgentRouter:
             return "Sir, excellent news! No sick cattle or critical BCS health warnings detected. All animals in the herd are healthy."
 
         elif tool_name == "get_cctv_proof_and_images":
-
             proofs = data.get("proof_images", [])
             if proofs:
                 if is_tamil:
-                    items = "\n".join([f"• **{p.get('cattle_id', 'மாடு')}**: {p.get('description', 'AI நிகழ்வு')} [**{p.get('camera_id', 'CAM01')}** - நேரம்: **{p.get('time', '')}** - துல்லியம்: **{p.get('confidence', '')}**]" for p in proofs[:4]])
+                    items = "\n".join([f"• **{p.get('cattle_id', 'மாடு')}**: {p.get('description', 'AI நிகழ்வு')} [**{p.get('camera_id', 'CAM01')}** - **{p.get('confidence', '')}** at **{p.get('time', '')}**]" for p in proofs[:3]])
                     return (
-                        f"ஐயா, நீங்கள் கேட்ட சிசிடிவி கேமரா புகைப்பட ஆதாரங்கள்:\n\n"
-                        f"📸 **சிசிடிவி கேமரா ஆதாரம்:**\n"
+                        f"ஐயா, நீங்கள் கேட்ட சிசிடிவி கேமரா புகைப்பட ஆதாரம்:\n\n"
                         f"{items}\n\n"
-                        f"📸 *கீழே உள்ள புகைப்படங்களை பெரிதாக்க (Zoom) கிளிக் செய்யவும்.*"
+                        f"📸 *சிசிடிவி புகைப்படங்கள் கீழே இணைக்கப்பட்டுள்ளன. பெரிதாக்க கிளிக் செய்யவும்.*"
                     )
-                items = "\n".join([f"• **{p.get('cattle_id', 'Cow')}**: {p.get('description', 'Vision detection')} [**{p.get('camera_id', 'CAM01')}** - Time: **{p.get('time', '')}** - Confidence: **{p.get('confidence', '')}**]" for p in proofs[:4]])
+                items = "\n".join([f"• **{p.get('cattle_id', 'Cow')}**: {p.get('description', 'Vision detection')} [**{p.get('camera_id', 'CAM01')}** - **{p.get('confidence', '')}** at **{p.get('time', '')}**]" for p in proofs[:3]])
                 return (
                     f"Sir, here are the captured CCTV detection photos as requested:\n\n"
-                    f"📸 **CCTV Camera Evidence:**\n"
                     f"{items}\n\n"
-                    f"📸 *Detection proof images are displayed directly below in your chat gallery. Click any photo to zoom in.*"
+                    f"📸 *CCTV capture proof images are displayed below in your chat gallery. Click any photo to zoom in.*"
                 )
-            return "Sir, no camera detection snapshots found matching that cattle ID or event. All cameras are recording live."
+            return "Sir, no camera detection snapshots found matching that query. All cameras are recording live."
 
         elif tool_name == "get_estrus_and_heat_alerts":
             alerts = data.get("latest_alerts") or data.get("proof_images", [])
@@ -904,137 +964,70 @@ class AgentRouter:
             low_bcs = data.get("low_bcs_cattle", [])
             estrus_alerts = data.get("active_estrus_alerts", [])
 
-            if is_today and total_acts == 0:
+            target_requested = str(data.get("target_date_requested", "today")).lower()
+            is_yesterday = "yester" in target_requested or "yesterday" in str(date_label).lower()
+            day_word = "yesterday" if is_yesterday else "today"
+            Day_Word = "Yesterday" if is_yesterday else "Today"
+
+            if total_acts == 0:
                 if is_tamil:
                     return (
-                        f"வணக்கம் ஐயா! **{farm_name}** ({farm_code}) - **{date_label}**:\n\n"
-                        f"📊 **இன்றைய பண்ணை நிலவரம்:**\n"
-                        f"• கண்காணிக்கப்படும் மாடுகள்: {c_str}\n"
-                        f"• கேமராக்கள்: **{cams_cnt} கேமராக்கள் நேரலையில் இயங்குகின்றன** (CAM01 Corral Alley, CAM02 Milking Parlor & Manger)\n"
-                        f"• **இன்று பதிவான AI நிகழ்வுகள்:** **0 புதிய நிகழ்வுகள்**\n"
-                        f"• **இன்றைய சினைப்பருவ எச்சரிக்கைகள்:** **0 எச்சரிக்கைகள்**\n"
-                        f"• **இன்றைய தீவன நிகழ்வுகள்:** **0 பதிவுகள்**\n\n"
-                        f"ℹ️ அனைத்து மாடுகளும் தொழுவத்தில் அமைதியாக ஓய்வெடுக்கின்றன. முந்தைய நிகழ்வுகள் நேற்று பதிவாகின."
+                        f"வணக்கம் ஐயா! **{Day_Word} பண்ணை நிலவரம்** ({date_label}):\n\n"
+                        f"• **கண்காணிப்பு நிலை:** **0 நிகழ்வுகள்** (கேமரா பதிவுகள் இல்லை).\n"
+                        f"• **பண்ணைத் தரவு:** {Day_Word} பண்ணைத் தரவு தரவுத்தளத்தில் கிடைக்கவில்லை.\n"
+                        f"• **அடுத்த நடவடிக்கை:** தயவுசெய்து இந்த தேதிக்கான தரவை தரவுத்தளத்தில் பதிவேற்றவும்."
                     )
                 return (
-                    f"Hello Sir! Here is your live farm status for **{farm_name}** ({farm_code}) - **{date_label}**:\n\n"
-                    f"📊 **Today's Activity Status:**\n"
-                    f"• Monitored Cattle: {c_str}\n"
-                    f"• Cameras Online: **{cams_cnt} cameras connected** (CAM01 Corral Alley, CAM02 Milking Parlor & Manger)\n"
-                    f"• **Detections Today:** **0 new activities** logged so far today.\n"
-                    f"• **Estrus Alerts Today:** **0 active alerts**\n"
-                    f"• **Feeding Events Today:** **0 events logged**\n\n"
-                    f"ℹ️ Herd is calm and resting normally in the corral. Previous detection events were recorded yesterday."
+                    f"Sir, here is **{Day_Word}'s Farm Status** ({date_label}):\n\n"
+                    f"• **Vision Detections:** **0 events** logged across all cameras.\n"
+                    f"• **Telemetry Status:** No detection records found in the database for {day_word}.\n"
+                    f"• **Next Step:** Please upload data into the database or verify live camera feed."
                 )
 
-            # 1. Suspected Disease Section
+            # 1. Health Status Line
             if suspected:
-                d_items = []
-                for d in suspected:
-                    cam = d.get('camera_id', 'CAM01')
-                    conf = d.get('confidence', '90%')
-                    t = d.get('time', 'recent')
-                    d_name = d.get('disease', 'Health Issue')
-                    b_name = d.get('breed') or 'Cattle'
-                    cid = d.get('cattle_id')
-                    d_items.append(
-                        f"• **{cid}** ({b_name}): **Suspected {d_name}** [**{cam}** - **{conf} Confidence** at {t}]\n"
-                        f"  - *Observation:* AI camera vision flagged cutaneous skin nodules / lesions during standing scan. Isolate cow immediately for veterinary examination."
-                    )
-                disease_section = "⚠️ **Suspected Disease Alerts:**\n" + "\n".join(d_items)
+                d_cows = ", ".join([f"**{d.get('cattle_id')}** ({d.get('disease')})" for d in suspected[:2]])
+                disease_line = f"• ⚠️ **Health Alert:** Suspected disease in {d_cows}. Isolate for veterinary check.\n"
+            elif low_bcs:
+                b_cows = ", ".join([f"**{b.get('cattle_id')}** (BCS: {b.get('bcs_score')})" for b in low_bcs[:2]])
+                disease_line = f"• ⚠️ **Low BCS Alert:** {b_cows} below 2.0 threshold. Increase energy feed.\n"
             else:
-                disease_section = "⚠️ **Suspected Disease Alerts:** None (All monitored cattle appear healthy)"
+                disease_line = "• **Health Status:** All cattle Healthy. No disease flags or low BCS warnings.\n"
 
-            # 2. Low BCS Section (< 2.0)
-            if low_bcs:
-                b_items = []
-                for b in low_bcs:
-                    score = b.get("bcs_score", 0.0)
-                    cam = b.get('camera_id', 'CAM01')
-                    conf = b.get('confidence', '90%')
-                    b_name = b.get('breed') or 'Cattle'
-                    cid = b.get('cattle_id')
-                    note = "Severely underconditioned / emaciated" if score < 1.5 else "Underconditioned / energy deficit"
-                    b_items.append(
-                        f"• **{cid}** ({b_name}): **BCS {score} / 5.0** ({note}) [**{cam}** - **{conf} Confidence**]"
-                    )
-                bcs_section = "📉 **Low BCS Warnings (Body Condition Score < 2.0):**\n" + "\n".join(b_items)
-            else:
-                bcs_section = "📉 **Low BCS Warnings (BCS < 2.0):** None (All cattle maintained above BCS 2.0)"
-
-            # 3. Estrus Section (> 85%)
+            # 2. Estrus Line
             if estrus_alerts:
-                e_items = []
-                for e in estrus_alerts:
-                    cid = e.get('cattle_id')
-                    conf = e.get('confidence', '90%')
-                    cam = e.get('camera_id', 'CAM01')
-                    t = e.get('time', 'recent')
-                    desc = e.get('description') or 'Active Mounting (Estrus Heat)'
-                    e_items.append(
-                        f"• **{cid}**: {desc} [**{cam}** - **{conf} Confidence** at {t}]"
-                    )
-                estrus_section = f"🔥 **Active Estrus Detections (>85% Confidence):**\n" + "\n".join(e_items)
+                e_first = estrus_alerts[0]
+                e_cid = e_first.get("cattle_id", "Cattle")
+                e_cam = e_first.get("camera_id", "CAM01")
+                e_time = e_first.get("time", "")
+                e_conf = e_first.get("confidence", "85%")
+                estrus_line = (
+                    f"• 🔥 **Heat / Estrus Alert:** **{e_cid}** detected in active mounting behaviour on **{e_cam}** ({e_conf} confidence at {e_time}).\n"
+                    f"• 🩺 **Breeding Recommendation:** Inspect cervix discharge and standing heat. We recommend using the **Chimertech Visual AI Insemination Gun with HD Camera** (for visual cervical verification and precise insemination) and **Chimertech Estrus Detection Kit** (available on **chimertech.shop**).\n"
+                )
             else:
-                estrus_section = "🔥 **Active Estrus Detections (>85% Confidence):** None"
+                estrus_line = f"• **Heat / Estrus:** No active mounting or standing heat detected {day_word}.\n"
+
+            cattle_details = data.get("cattle_details", [])
+            uniq_cnt = len(cattle_details) if cattle_details else herd_cnt
 
             if is_tamil:
-                if suspected:
-                    td_items = []
-                    for d in suspected:
-                        td_items.append(
-                            f"• **{d.get('cattle_id')}** ({d.get('breed', 'மாடு')}): **{d.get('disease')} (தோல் கழலை நோய் அறிகுறி)** [**{d.get('camera_id', 'CAM01')}** - **{d.get('confidence', '90%')} துல்லியம்**]\n"
-                            f"  - *பரிந்துரை:* மாட்டிற்கு தோல் கட்டிகள் கண்டறியப்பட்டுள்ளன. உடனடியாக மற்ற மாடுகளிடமிருந்து பிரித்து மருத்துவரை அணுகவும்."
-                        )
-                    t_disease = "⚠️ **நோய் அறிகுறி எச்சரிக்கைகள்:**\n" + "\n".join(td_items)
-                else:
-                    t_disease = "⚠️ **நோய் அறிகுறி எச்சரிக்கைகள்:** ஏதுமில்லை (அனைத்து மாடுகளும் நலமாக உள்ளன)"
-
-                if low_bcs:
-                    tb_items = []
-                    for b in low_bcs:
-                        score = b.get("bcs_score", 0.0)
-                        tnote = "மிகவும் மெலிந்த உடல் நிலை" if score < 1.5 else "குறைந்த உடல் தகுதி / ஊட்டச்சத்து பற்றாக்குறை"
-                        tb_items.append(
-                            f"• **{b.get('cattle_id')}** ({b.get('breed', 'மாடு')}): **BCS {score} / 5.0** ({tnote}) [**{b.get('camera_id', 'CAM01')}** - **{b.get('confidence', '90%')} துல்லியம்**]"
-                        )
-                    t_bcs = "📉 **குறைந்த உடல் தகுதி எச்சரிக்கை (BCS < 2.0):**\n" + "\n".join(tb_items)
-                else:
-                    t_bcs = "📉 **குறைந்த உடல் தகுதி எச்சரிக்கை (BCS < 2.0):** ஏதுமில்லை"
-
-                if estrus_alerts:
-                    te_items = []
-                    for e in estrus_alerts:
-                        te_items.append(
-                            f"• **{e.get('cattle_id')}**: தாவுதல் / சினைப்பருவம் [**{e.get('camera_id', 'CAM01')}** - **{e.get('confidence', '90%')} துல்லியம்**]"
-                        )
-                    t_estrus = "🔥 **சினைப்பருவ எச்சரிக்கைகள் (>85% துல்லியம்):**\n" + "\n".join(te_items)
-                else:
-                    t_estrus = "🔥 **சினைப்பருவ எச்சரிக்கைகள் (>85% துல்லியம்):** ஏதுமில்லை"
-
-                proof_str = "\n\n📸 *நோய் அறிகுறி, குறைந்த BCS மற்றும் சினைப்பருவத்திற்கான சிசிடிவி புகைப்பட ஆதாரங்கள் கீழே இணைக்கப்பட்டுள்ளன.*" if proof_imgs else ""
                 return (
-                    f"வணக்கம் ஐயா! **{farm_name}** ({farm_code}) பண்ணை நிலவரம் ({date_label}):\n\n"
-                    f"📊 **பண்ணை சுருக்கம் & AI நிலவரம்:**\n"
-                    f"• கண்காணிக்கப்படும் மாடுகள்: {c_str}\n"
-                    f"• மொத்த AI நிகழ்வுகள்: **{total_acts}**\n\n"
-                    f"{t_disease}\n\n"
-                    f"{t_bcs}\n\n"
-                    f"{t_estrus}\n\n"
-                    f"🌾 **தீவன நிலை:** **{feed_cnt} நிகழ்வுகள்**{proof_str}"
+                    f"வணக்கம் ஐயா! **{farm_name}** {Day_Word} பண்ணை நிலவரம் ({date_label}):\n\n"
+                    f"• **கண்காணிப்பு சுருக்கம்:** **{uniq_cnt} மாடுகள்** கண்காணிக்கப்பட்டு, **{total_acts} நிகழ்வுகள்** பதிவாகின.\n"
+                    f"{estrus_line}"
+                    f"{disease_line}"
+                    f"• **தீவன நிலை:** **{feed_cnt} தீவன நிகழ்வுகள்** பதிவாகியுள்ளன.\n\n"
+                    f"📸 *சிசிடிவி புகைப்பட ஆதாரங்கள் கீழே இணைக்கப்பட்டுள்ளன. வரைபடம் இடது பக்கத்தில் திறக்கப்பட்டுள்ளது.*"
                 )
 
-            proof_str = "\n\n📸 *CCTV capture proof images for suspected disease, low BCS, and estrus are displayed below in your chat gallery.*" if proof_imgs else ""
             return (
-                f"Hello Sir! Here is the live status for **{farm_name}** ({farm_code}) - {date_label}:\n\n"
-                f"📊 **Herd Telemetry & Vision Summary:**\n"
-                f"• Monitored Cattle: {c_str}\n"
-                f"• Cameras Online: **{cams_cnt} cameras connected** (CAM01 Corral Alley, CAM02 Milking Parlor & Manger)\n"
-                f"• Total Vision Detections: **{total_acts} Activities**\n\n"
-                f"{disease_section}\n\n"
-                f"{bcs_section}\n\n"
-                f"{estrus_section}\n\n"
-                f"🌾 **Manger Feeding Activity:** **{feed_cnt} Events Logged** (Manger monitored on CAM01){proof_str}"
+                f"Sir, here is {day_word}'s farm status ({date_label}):\n\n"
+                f"• **Herd Activity:** **{uniq_cnt} cattle** monitored across **{total_acts} vision detections** on **{cams_cnt} active cameras**.\n"
+                f"{estrus_line}"
+                f"{disease_line}"
+                f"• **Manger Feeding:** **{feed_cnt} feeding activity** logged at feed alley.\n\n"
+                f"📸 *CCTV capture proof images are displayed below. That day's activity breakdown is graphed on the left.*"
             )
 
         elif tool_name == "veterinary_and_products_rag":
@@ -1235,8 +1228,16 @@ class AgentRouter:
 
         # 1. Proof & Image requests
         if any(w in lower_u for w in ["proof", "image", "photo", "pic", "picture", "snapshot", "evidence", "படம்", "ஆதாரம்", "புகைப்படம்", "तस्वीर", "सबूत"]):
+            req_act = None
+            if any(w in lower_u for w in ["mount", "heat", "estrus", "breeding", "சினைப்பருவம்"]):
+                req_act = "estrus"
+            elif any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
+                req_act = "feeding"
+            elif any(w in lower_u for w in ["sick", "disease", "mastitis", "bcs", "நோய்"]):
+                req_act = "disease"
+
             tool_spec = FARM_TOOLS.get("get_cctv_proof_and_images")
-            tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow)
+            tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow, activity_type=req_act)
             summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text)
             return summary, {
                 "executed": True,
@@ -1329,17 +1330,29 @@ class AgentRouter:
             }
 
         # 7. Explicit Farm Overview / Summary queries
-        OVERVIEW_WORDS = ["overview", "summary", "report", "telemetry", "dashboard", "status", "how is the farm", "how is my farm", "what hapned", "what happened", "what happened today", "today summary", "நிலவரம்", "அறிக்கை"]
-        if any(w in lower_u for w in OVERVIEW_WORDS):
+        OVERVIEW_WORDS = [
+            "overview", "summary", "report", "telemetry", "dashboard", "status", "stausts", "stiats", "stauts",
+            "how is the farm", "how is my farm", "what happened", "what happned", "what hapned",
+            "yesterday in the farm", "today in the farm", "farm activity", "farm activities",
+            "yesterday activity", "today activity", "yesterday data", "today data",
+            "yesterday farm", "today farm", "நிலவரம்", "அறிக்கை"
+        ]
+        is_overview_match = any(w in lower_u for w in OVERVIEW_WORDS) or (
+            any(w in lower_u for w in ["happen", "happned", "hapned", "going on", "activity", "activities", "event", "events"]) and
+            any(t in lower_u for t in ["yesterday", "yester", "today", "farm", "shed"])
+        )
+        if is_overview_match:
             tool_spec = FARM_TOOLS.get("get_farm_overview")
-            d_target = "today" if any(t in lower_u for t in ["today", "இன்று", "आज"]) else ("yesterday" if any(y in lower_u for y in ["yester", "நேற்று", "कल"]) else "today")
+            d_target = "yesterday" if any(y in lower_u for y in ["yester", "நேற்று", "कल"]) else "today"
             tool_result = await tool_spec["function"](farm_id=farm_id, target_date=d_target)
             summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text)
+            ret_proofs = tool_result.get("proof_images", []) if tool_result.get("total_activities_detected", 0) > 0 else []
             return summary, {
                 "executed": True,
                 "tool": "get_farm_overview",
                 "result": tool_result,
-                "proof_images": tool_result.get("proof_images", [])
+                "proof_images": ret_proofs,
+                "is_status_query": True
             }
 
         # 8. Conversational Agent Response (Do not dump unsolicited farm reports)

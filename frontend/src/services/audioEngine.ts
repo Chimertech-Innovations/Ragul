@@ -181,16 +181,6 @@ export class AudioController {
           const rawTranscript = event.results[lastResultIndex][0].transcript.trim();
           if (!rawTranscript) return;
 
-          // INSTANT BARGE-IN INTERRUPTION: If user speaks during AI playback, immediately halt Ragul's voice!
-          if (this.isSynthesizing) {
-            console.log('[AudioController] User voice query detected during AI speech! Cutting off AI immediately:', rawTranscript);
-            this.stopSpeaking();
-            if (this.onInterruptionCallback) {
-              this.onInterruptionCallback();
-            }
-            this.accumulatedSpeech = '';
-          }
-
           const transcript = this.normalizeDairyPhonetics(rawTranscript);
 
           const GHOST_HALLUCINATIONS = [
@@ -231,21 +221,39 @@ export class AudioController {
             return;
           }
 
-          // Continuous Speech Accumulator: append consecutive speech turns until user takes a full breath/pause
-          if (!this.accumulatedSpeech) {
-            this.accumulatedSpeech = transcript;
-          } else if (!this.accumulatedSpeech.toLowerCase().includes(transcript.toLowerCase())) {
-            this.accumulatedSpeech += ' ' + transcript;
+          // LOUD USER VOICE BARGE-IN: If Ragul is currently speaking, do NOT interrupt on faint murmur
+          // ONLY stop if user speaks an intentional phrase (>=2 words or >=6 characters)
+          if (this.isSynthesizing) {
+            const wordCount = transcript.trim().split(/\s+/).length;
+            if (wordCount >= 2 || transcript.length >= 6) {
+              console.log('[AudioController] Loud user speech confirmed during playback! Halting AI speech and processing question:', transcript);
+              this.stopSpeaking();
+              if (this.onInterruptionCallback) {
+                this.onInterruptionCallback();
+              }
+              // Retain user's spoken words so they are dispatched and answered
+              this.accumulatedSpeech = transcript;
+            } else {
+              console.log('[AudioController] Ignored brief ambient sound during speech playback:', transcript);
+              return;
+            }
+          } else {
+            // Continuous Speech Accumulator: append consecutive speech turns until user takes a full breath/pause
+            if (!this.accumulatedSpeech) {
+              this.accumulatedSpeech = transcript;
+            } else if (!this.accumulatedSpeech.toLowerCase().includes(transcript.toLowerCase())) {
+              this.accumulatedSpeech += ' ' + transcript;
+            }
           }
 
-          console.log('[AudioController] Accumulating speech:', this.accumulatedSpeech);
+          console.log('[AudioController] User speech:', this.accumulatedSpeech);
 
-          // Clear previous timer and set natural pause silence debounce (1.7s)
+          // Clear previous timer and set natural pause silence debounce (3.0s)
           if (this.speechDebounceTimer) {
             clearTimeout(this.speechDebounceTimer);
           }
 
-          // Wait 1.7s of natural pause silence before finalizing and dispatching
+          // Wait 3.0s of natural pause silence before finalizing and dispatching
           this.speechDebounceTimer = setTimeout(() => {
             const finalQuery = this.accumulatedSpeech.trim();
             this.accumulatedSpeech = '';
@@ -267,7 +275,7 @@ export class AudioController {
 
               this.lastSentTranscript = finalQuery;
               this.lastTranscriptTime = now;
-              console.log('[AudioController] Speech Silence Trigger (1.7s). Dispatching Query:', finalQuery);
+              console.log('[AudioController] Speech Silence Trigger (3.0s). Dispatching Query:', finalQuery);
               
               if (this.onSilenceEndCallback) {
                 this.onSilenceEndCallback();
@@ -476,13 +484,13 @@ export class AudioController {
         }
 
         // Acoustic Voice Activity Barge-In:
-        // Reject ambient noise and room echo; require real vocal presence (rms > 0.14 for 3 consecutive frames)
+        // Reject ambient noise, mic hiss, and room echo; strictly require loud user vocal presence (rms > 0.18 for 4 consecutive frames)
         if (this.isSynthesizing) {
           const now = Date.now();
-          if (now - this.speechStartTime > 400 && rms > 0.14) {
+          if (now - this.speechStartTime > 500 && rms > 0.18) {
             this.voiceInterruptionFrames = (this.voiceInterruptionFrames || 0) + 1;
-            if (this.voiceInterruptionFrames >= 3) {
-              console.log('[AudioController] Loud user voice confirmed during playback. Halting speech synthesis.');
+            if (this.voiceInterruptionFrames >= 4) {
+              console.log('[AudioController] Loud user voice confirmed during playback (rms:', rms.toFixed(3), '). Halting speech synthesis.');
               this.voiceInterruptionFrames = 0;
               this.stopSpeaking();
               if (this.onInterruptionCallback) {

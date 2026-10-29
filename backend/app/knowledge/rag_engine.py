@@ -1,3 +1,4 @@
+
 import os
 import json
 import re
@@ -135,22 +136,45 @@ class VeterinaryRAGEngine:
                 best_scenario = sc
 
         lower_q = cleaned_query.lower()
-        is_nasem_q = any(w in lower_q for w in [
-            "nasem", "dmi", "dry matter intake", "fwi", "free water intake",
-            "water requirement", "water intake", "water formula", "energy requirement",
-            "nel", "me", "milk energy", "gestation energy", "gravid uterus",
-            "heifer me", "frame growth", "factorial mineral", "calcium requirement",
-            "phosphorus requirement", "mineral mixture", "ration optimization",
-            "balance status", "single source of truth", "deprecated formula", "deprecated rule"
+        # Strictly guard against routing clinical disease, veterinary symptom, or biosecurity questions to NASEM
+        is_disease_q = any(re.search(rf"\b{w}\b", lower_q) for w in [
+            "disease", "diseases", "prevent", "prevention", "spread", "spreading",
+            "infection", "infectious", "biosecurity", "quarantine", "sick", "symptom",
+            "symptoms", "fever", "mastitis", "fmd", "bloat", "treatment", "medicine", "vaccine", "isolate"
         ])
-        if is_nasem_q:
+        is_explicit_nasem = any(re.search(rf"\b{w}\b", lower_q) for w in [
+            "nasem", "dmi", "fwi", "nel", "me", "mp", "dry matter intake", "free water intake",
+            "water requirement", "ration optimization", "single source of truth", "deprecated formula"
+        ])
+        if is_explicit_nasem and not is_disease_q:
             nasem_match = self.search_nasem_nutrition(cleaned_query)
             if nasem_match:
                 return nasem_match
 
-        # If no clinical or product match exceeds confidence threshold
+        # If no clinical or product match exceeds confidence threshold, provide reliable general veterinary guidance
         if best_vet_score < 5.0 and best_scenario_score < 5.0:
-            return None
+            return {
+                "topic": "General Cattle Health & Veterinary Guidance",
+                "clinical_answer": "To prevent disease transmission and protect your herd, standard veterinary protocols advise isolating any sick animal immediately, maintaining strict barn hygiene, and ensuring clean feed and water.",
+                "action": "Isolate the affected cow immediately in a clean, quiet, shaded pen with abundant fresh water. Contact your qualified veterinarian for professional diagnosis and medical treatment.",
+                "prevention": "Maintain strict herd biosecurity: isolate new arrivals for 21-30 days, disinfect equipment and sheds regularly, and keep vaccinations up to date.",
+                "prevention_tips": [
+                    "Isolate sick animals immediately from the main herd in a dedicated sick stall",
+                    "Quarantine all newly introduced or returning cattle for 21 to 30 days before mixing",
+                    "Provide constant access to clean drinking water and clean feeding troughs",
+                    "Consult a licensed veterinarian for diagnosis, medication, or vaccination protocols"
+                ],
+                "products": [
+                    {
+                        "name": "Chimertech Bovine Herd Health Diagnostic Solutions",
+                        "url": "https://chimertech.shop",
+                        "purpose": "Early cow-side diagnostic screening and infection surveillance"
+                    }
+                ],
+                "store_url": "https://chimertech.shop/",
+                "spoken_response": "Sir, for cattle health and disease control, isolate any sick animal immediately, maintain clean feed and water, and arrange a veterinarian assessment for diagnosis and prescription medication.",
+                "score": 5.0
+            }
 
         # Build combined response
         matched_products = []
@@ -190,6 +214,13 @@ class VeterinaryRAGEngine:
                 "Practice proper post-milking teat barrier dip immediately after clusters detach",
                 "Monitor cows regularly with quarter-wise cow-side screening tests"
             ]
+        elif any(w in lower_topic for w in ["estrus", "heat", "breeding", "insemination", "ai gun", "mounting", "standing heat", "சினை", "பருவம்"]):
+            prevention_tips = [
+                "Observe herd for standing heat signs 2 to 3 times daily (early morning and late evening)",
+                "Follow the AM-PM rule: cows in standing heat in the morning should be bred in the evening (12-18 hr window)",
+                "Inspect clear, stringy cervical mucus discharge before proceeding with artificial insemination",
+                "Use visual inspection tools to avoid cervical trauma and ensure precise deep-uterine semen placement"
+            ]
         elif any(w in lower_topic for w in ["bloat", "tympanites", "rumen gas"]):
             prevention_tips = [
                 "Introduce lush green legumes and young pastures gradually over 7–10 days",
@@ -225,6 +256,13 @@ class VeterinaryRAGEngine:
                 "Install vehicle tire disinfection dip baths and footwear disinfectant footbaths at farm gate",
                 "Immediately restrict visitors, vehicles, and animal movement if any blister sores appear"
             ]
+        elif any(w in lower_topic for w in ["biosecurity", "prevent disease", "disease spread", "spreading", "quarantine", "transmission", "contagious"]):
+            prevention_tips = [
+                "Quarantine all newly purchased or returning cattle for 21 to 30 days before mixing with the herd",
+                "Immediately isolate sick cattle in a separate stall with dedicated feeding buckets and tools",
+                "Maintain disinfectant footbaths at shed entrances and sanitize milking gear between animals",
+                "Control vectors (ticks and flies) and follow a timely vaccination schedule supervised by your veterinarian"
+            ]
         elif prevention:
             parts = re.split(r'[,;.]\s*(?:and\s*)?', prevention)
             prevention_tips = [p.strip().capitalize() for p in parts if len(p.strip()) > 8][:4]
@@ -243,6 +281,19 @@ class VeterinaryRAGEngine:
                     "name": "Chimertech CMT Kit 500 ml with paddle",
                     "url": "https://chimertech.shop",
                     "purpose": "Cow-side somatic cell subclinical mastitis screening"
+                }
+            ]
+        elif any(w in lower_topic for w in ["estrus", "heat", "breeding", "insemination", "ai gun", "artificial insemination", "mounting", "standing heat", "சினை", "பருவம்"]):
+            matched_products = [
+                {
+                    "name": "Chimertech Visual AI Insemination Gun with HD Camera",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Visual cervical inspection, heat mucus verification, and precise non-traumatic artificial insemination"
+                },
+                {
+                    "name": "Chimertech Smart Bovine Estrus Detection Kit",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Accurate standing heat detection and tracking the optimal 12-18 hour breeding window"
                 }
             ]
         elif any(w in lower_topic for w in ["fmd", "foot and mouth", "foot-and-mouth", "கோமாரி"]):
@@ -283,6 +334,14 @@ class VeterinaryRAGEngine:
                     "name": "Oral Electrolyte Rehydration Formula (ORS)",
                     "url": "https://chimertech.shop",
                     "purpose": "Calf dehydration reversal and gut electrolyte replenishment"
+                }
+            ]
+        elif any(w in lower_topic for w in ["biosecurity", "prevent disease", "disease spread", "spreading", "quarantine", "transmission"]):
+            matched_products = [
+                {
+                    "name": "Chimertech Bovine Herd Health Rapid Screening Kits",
+                    "url": "https://chimertech.shop",
+                    "purpose": "Cow-side herd screening and early infection surveillance"
                 }
             ]
 

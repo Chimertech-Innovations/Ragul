@@ -18,7 +18,9 @@ from .tools.farm_tools import (
     get_feed_and_nutrition,
     get_cameras_status,
     get_cow_activity_history,
-    get_cctv_proof_and_images
+    get_cctv_proof_and_images,
+    get_farm_herd_summary,
+    get_single_day_cattle_graphical_analytics
 )
 from .llm.router import tool_router
 from .memory.session_manager import session_manager
@@ -108,8 +110,36 @@ async def get_media_image(path: str = Query(...)):
                         "Access-Control-Allow-Origin": "*"
                     }
                 )
+
+            # Fallback: If 400/404, check other storage folder prefixes for the exact image filename
+            filename = clean_path.split("/")[-1]
+            candidate_prefixes = [
+                "098b67ef-059a-4c2d-965a-06399e5a1bdf/images",
+                "732fd751-a34b-4de7-80fd-9330ce729a35/images",
+                "584cab92-d75d-4aa0-824a-c07423aa6453/images"
+            ]
+            for prefix in candidate_prefixes:
+                alt_path = f"{prefix}/{filename}"
+                if alt_path == clean_path:
+                    continue
+                alt_url = f"{supabase_url}/storage/v1/object/authenticated/pashux-activity-images/{alt_path}"
+                alt_r = await client.get(alt_url, headers=headers)
+                if alt_r.status_code == 200:
+                    logger.info(f"[Media] Successfully resolved image {filename} via fallback path: {alt_path}")
+                    media_type = alt_r.headers.get("content-type", "image/jpeg")
+                    return Response(
+                        content=alt_r.content,
+                        media_type=media_type,
+                        headers={
+                            "Cache-Control": "public, max-age=86400",
+                            "Access-Control-Allow-Origin": "*"
+                        }
+                    )
+
             logger.warning(f"[Media] Storage fetch returned {r.status_code} for path: {clean_path}")
             raise HTTPException(status_code=r.status_code, detail="Image not found in farm storage")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[Media] Error proxying image: {e}")
         raise HTTPException(status_code=404, detail="Could not retrieve camera image")
@@ -171,6 +201,17 @@ async def get_farm_cameras_endpoint(farm_id: Optional[str] = Query(None)):
 async def get_cow_detail(cow_id: str, farm_id: Optional[str] = Query(None)):
     summary = await get_cow_activity_history(cow_id, farm_id)
     return summary
+
+@app.get("/api/farm/analytics")
+async def get_farm_analytics_endpoint(farm_id: Optional[str] = Query(None)):
+    """Provides ground-truth cattle statistics and vision telemetry for Apache ECharts visualization."""
+    herd = await get_farm_herd_summary(farm_id)
+    activity = await get_single_day_cattle_graphical_analytics(farm_id, target_date="yesterday")
+    return {
+        "status": "success",
+        "herd": herd,
+        "activity": activity
+    }
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
