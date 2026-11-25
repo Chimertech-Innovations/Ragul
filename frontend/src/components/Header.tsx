@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, MessageSquare, Radio, Sparkles, User, LogOut, KeyRound, BarChart3 } from 'lucide-react';
+import { Sun, Moon, MessageSquare, Radio, Sparkles, BarChart3, Activity } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
 interface HeaderProps {
@@ -7,7 +7,6 @@ interface HeaderProps {
   onToggleTheme: () => void;
   isSideChatOpen: boolean;
   onToggleSideChat: () => void;
-  onOpenLogin: () => void;
   isLeftDiagramOpen?: boolean;
   onToggleLeftDiagram?: () => void;
 }
@@ -17,19 +16,10 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   isSideChatOpen,
   onToggleSideChat,
-  onOpenLogin,
   isLeftDiagramOpen,
   onToggleLeftDiagram
 }) => {
-  const { messages, isListening, isSpeaking, currentUser, setCurrentUser, addMessage } = useRagulStore();
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    addMessage({
-      role: 'assistant',
-      content: 'You have logged out from your farm. Please sign in again with your phone number and password to access your farm telemetry.'
-    });
-  };
+  const { messages, isListening, isSpeaking } = useRagulStore();
 
   return (
     <header className="header header-minimal">
@@ -47,26 +37,12 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-status-strip">
-        {currentUser ? (
-          <div className="user-logged-badge" title={`Farm: ${currentUser.farm_name} (${currentUser.farm_code})`}>
-            <span className="user-icon-dot" />
-            <User size={13} className="text-cyan-400" />
-            <span className="user-name-text">{currentUser.full_name}</span>
-            <span className="farm-code-tag">{currentUser.farm_code}</span>
-            <button
-              onClick={handleLogout}
-              className="logout-mini-btn"
-              title="Logout from this farm"
-            >
-              <LogOut size={12} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={onOpenLogin} className="login-header-btn">
-            <KeyRound size={13} />
-            <span>Farm Login</span>
-          </button>
-        )}
+        <div className="user-logged-badge" title="RAGUL Dairy AI Farm Supervisor Active">
+          <span className="user-icon-dot" />
+          <Activity size={13} className="text-emerald-400" />
+          <span className="user-name-text">Live Supervisor</span>
+          <span className="farm-code-tag">ACTIVE</span>
+        </div>
 
         {isListening && (
           <div className="status-chip hearing-chip">

@@ -19,18 +19,6 @@ export interface ChatMessageItem {
   timestamp: string;
 }
 
-export interface UserProfile {
-  id: string;
-  phone: string;
-  full_name: string;
-  role: string;
-  farm_id: string;
-  farm_code: string;
-  farm_name: string;
-  owner_name?: string;
-  location?: string;
-}
-
 export interface EstrusAlert {
   cattle_id: string;
   camera: string;
@@ -63,7 +51,7 @@ export interface FarmOverviewData {
 
 interface RagulState {
   sessionId: string;
-  currentUser: UserProfile | null;
+  farmId: string;
   messages: ChatMessageItem[];
   isListening: boolean;
   isSpeaking: boolean;
@@ -71,12 +59,10 @@ interface RagulState {
   vadStatus: string;
   interrupted: boolean;
   farmOverview: FarmOverviewData | null;
-  isLoginModalOpen: boolean;
 
   // Actions
   setSessionId: (sessionId: string) => void;
-  setCurrentUser: (user: UserProfile | null) => void;
-  setLoginModalOpen: (open: boolean) => void;
+  setFarmId: (farmId: string) => void;
   addMessage: (message: Omit<ChatMessageItem, 'id' | 'timestamp'>) => void;
   setListening: (listening: boolean) => void;
   setSpeaking: (speaking: boolean) => void;
@@ -87,28 +73,14 @@ interface RagulState {
   clearMessages: () => void;
 }
 
-const getInitialUser = (): UserProfile | null => {
-  try {
-    const raw = localStorage.getItem('ragul_user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const initialUser = getInitialUser();
-
 export const useRagulStore = create<RagulState>((set) => ({
   sessionId: localStorage.getItem('ragul_session_id') || `session_${Math.random().toString(36).substring(2, 11)}`,
-  currentUser: initialUser,
-  isLoginModalOpen: false,
+  farmId: localStorage.getItem('ragul_farm_id') || '584cab92-d75d-4aa0-824a-c07423aa6453',
   messages: [
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: initialUser
-        ? "Hello Sir! I am RAGUL, your PashuX AI Dairy Farm Supervisor. How can I help you and your herd today, Sir?"
-        : "Hello Sir! I'm RAGUL, your PashuX AI Dairy Farm Supervisor. Please log in with your phone number and password to view and discuss your live farm cameras, estrus detection, and cattle activities.",
+      content: "Hello Sir! I am **RAGUL**, your PashuX AI Dairy Farm Supervisor. How can I help you and your herd today, Sir?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ],
@@ -124,30 +96,10 @@ export const useRagulStore = create<RagulState>((set) => ({
     set({ sessionId });
   },
 
-  setCurrentUser: (currentUser: UserProfile | null) => {
-    if (currentUser) {
-      localStorage.setItem('ragul_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('ragul_user');
-    }
-    set((state) => {
-      // If the only message is the unauthenticated login prompt, replace with warm welcome
-      let updatedMessages = state.messages;
-      if (currentUser && state.messages.length === 1 && state.messages[0].id === 'welcome-1') {
-        updatedMessages = [
-          {
-            id: 'welcome-1',
-            role: 'assistant',
-            content: `Hello ${currentUser.full_name || 'Sir'}! I am **RAGUL**, your PashuX AI Dairy Farm Supervisor. How can I help you and your herd today, Sir?`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ];
-      }
-      return { currentUser, messages: updatedMessages };
-    });
+  setFarmId: (farmId: string) => {
+    localStorage.setItem('ragul_farm_id', farmId);
+    set({ farmId });
   },
-
-  setLoginModalOpen: (isLoginModalOpen) => set({ isLoginModalOpen }),
 
   addMessage: (msg) => {
     set((state) => ({

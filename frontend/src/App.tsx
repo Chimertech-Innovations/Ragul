@@ -7,7 +7,6 @@ import { LeftDiagramPanel } from './components/LeftDiagramPanel';
 import { useRagulStore, ChatMessageItem } from './store/useRagulStore';
 import { audioController } from './services/audioEngine';
 import { Send, Mic, MicOff, X, MessageSquare, Activity, BarChart3 } from 'lucide-react';
-import { LoginModal } from './components/LoginModal';
 
 export const App: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
@@ -22,9 +21,7 @@ export const App: React.FC = () => {
   const {
     sessionId,
     setSessionId,
-    currentUser,
-    isLoginModalOpen,
-    setLoginModalOpen,
+    farmId,
     isListening,
     setListening,
     isSpeaking,
@@ -43,16 +40,6 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('ragul_theme', theme);
   }, [theme]);
-
-  // Prompt login if no user logged in yet
-  useEffect(() => {
-    if (!currentUser) {
-      const timer = setTimeout(() => {
-        setLoginModalOpen(true);
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [currentUser, setLoginModalOpen]);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
@@ -112,35 +99,6 @@ export const App: React.FC = () => {
       return false;
     };
 
-    // MANDATORY AUTHENTICATION CHECK: Only logged-in users can access the chatbot!
-    if (!currentUser) {
-      console.log('[App] Unauthenticated user attempt. Prompting login...');
-      setLoginModalOpen(true);
-      const isTamil = /[\u0B80-\u0BFF]/.test(rawMessage);
-      const isHindi = /[\u0900-\u097F]/.test(rawMessage);
-      const loginPromptText = isTamil
-        ? "வணக்கம் ஐயா! ரகுல் ஏஐ (RAGUL AI) உங்கள் பண்ணை உதவியாளரை அணுக, தயவுசெய்து உங்கள் பதிவு செய்யப்பட்ட தொலைபேசி எண் மற்றும் கடவுச்சொல் மூலம் உள்நுழையவும் (Login)."
-        : isHindi
-        ? "नमस्ते सर! RAGUL AI और अपने फार्म डेटा को एक्सेस करने के लिए, कृपया अपने पंजीकृत फोन नंबर और पासवर्ड से लॉगिन (Login) करें।"
-        : "Hello Sir! You are currently not logged in. Please log in with your registered phone number and password to access RAGUL AI, your live farm cameras, and cattle records.";
-
-      audioController.stopSpeaking();
-      setSpeaking(false);
-      triggerInterruption();
-
-      addMessage({ role: 'user', content: rawMessage });
-      addMessage({
-        role: 'assistant',
-        content: loginPromptText,
-        tool_meta: { requires_login: true }
-      });
-      if (!textToSend) setInputValue('');
-      setSpeaking(true);
-      audioController.speakText(loginPromptText, 'en-US');
-      setTimeout(() => setSpeaking(false), 4500);
-      return;
-    }
-
     // Instant Barge-In / Interruption:
     // When user speaks a new question, cancel previous speech and abort previous backend request!
     if (activeAbortControllerRef.current) {
@@ -170,7 +128,7 @@ export const App: React.FC = () => {
           message: rawMessage,
           language: 'auto',
           session_id: sessionId,
-          farm_id: currentUser?.farm_id || null
+          farm_id: farmId
         })
       });
       clearTimeout(timeoutId);
@@ -187,10 +145,6 @@ export const App: React.FC = () => {
           setSessionId(data.session_id);
         }
 
-        if (data.tool_meta?.requires_login) {
-          setLoginModalOpen(true);
-        }
-
         const newAssistantMsg: ChatMessageItem = {
           id: `msg_${Date.now()}`,
           role: 'assistant',
@@ -202,7 +156,7 @@ export const App: React.FC = () => {
 
         addMessage(newAssistantMsg);
 
-        // Automatically activate Left Diagram Panel ONLY when user asks for farm status (today or yesterday)
+        // Automatically activate Left Diagram Panel when user asks for farm status
         const isStatusQuery = isFarmStatusQuery(rawMessage) || Boolean(data.tool_meta?.is_status_query);
         if (isStatusQuery) {
           setIsLeftDiagramOpen(true);
@@ -231,7 +185,7 @@ export const App: React.FC = () => {
       addMessage({
         role: 'assistant',
         content: isTimeout
-          ? 'Sir, response took longer than expected (>25 seconds). The AI model or farm database is taking longer to respond. Please try again or ask your question directly.'
+          ? 'Sir, response took longer than expected (>25 seconds). Please try again or ask your question directly.'
           : 'Backend offline. Please ensure the FastAPI server is active on port 8000.'
       });
     } finally {
@@ -260,9 +214,6 @@ export const App: React.FC = () => {
       },
       onAssistantResponse: (text, toolMeta) => {
         setProcessing(false);
-        if (toolMeta?.requires_login) {
-          setLoginModalOpen(true);
-        }
         addMessage({
           role: 'assistant',
           content: text,
@@ -271,7 +222,7 @@ export const App: React.FC = () => {
         });
       },
       onSilenceEnd: () => {
-        console.log('[App] User speech query received. Querying backend while keeping microphone continuously armed for hands-free dialogue...');
+        console.log('[App] User speech query received. Querying backend...');
       },
       onSpeechEnd: () => {
         console.log('[App] Assistant finished speaking. Keeping microphone listening for Sir...');
@@ -287,7 +238,6 @@ export const App: React.FC = () => {
         console.warn(`[App] Ambient audio notice: ${msg}`);
       },
       onClapWake: () => {
-        if (!currentUser) return;
         if (!audioController.isSynthesizing) {
           console.log('[App] Clap detected! Activating listening mode...');
           audioController.startStreaming(sessionId).then(() => {
@@ -311,23 +261,9 @@ export const App: React.FC = () => {
       window.removeEventListener('click', handleFirstUserInteraction);
       window.removeEventListener('keydown', handleFirstUserInteraction);
     };
-  }, [sessionId, isListening, setListening, currentUser]);
+  }, [sessionId, isListening, setListening]);
 
   const handleToggleMic = async () => {
-    if (!currentUser) {
-      setLoginModalOpen(true);
-      const loginPromptText = "Sir, please log in with your registered phone number and password to use voice conversation and access your farm chatbot.";
-      addMessage({
-        role: 'assistant',
-        content: loginPromptText,
-        tool_meta: { requires_login: true }
-      });
-      setSpeaking(true);
-      audioController.speakText(loginPromptText, 'en-US');
-      setTimeout(() => setSpeaking(false), 4500);
-      return;
-    }
-
     if (isListening) {
       audioController.stopStreaming();
       setListening(false);
@@ -336,7 +272,7 @@ export const App: React.FC = () => {
         await audioController.startStreaming(sessionId);
         setListening(true);
       } catch (e) {
-        alert('Could not access microphone. Please grant mic permissions.');
+        alert('Could not access microphone. Please grant mic permissions in your browser.');
       }
     }
   };
@@ -349,7 +285,6 @@ export const App: React.FC = () => {
         onToggleTheme={toggleTheme}
         isSideChatOpen={isSideChatOpen}
         onToggleSideChat={() => setIsSideChatOpen(!isSideChatOpen)}
-        onOpenLogin={() => setLoginModalOpen(true)}
         isLeftDiagramOpen={isLeftDiagramOpen}
         onToggleLeftDiagram={() => setIsLeftDiagramOpen(!isLeftDiagramOpen)}
       />
@@ -360,7 +295,7 @@ export const App: React.FC = () => {
         onClose={() => setIsLeftDiagramOpen(false)}
         activeMessage={activeDiagramMessage}
         theme={theme}
-        farmId={currentUser?.farm_id}
+        farmId={farmId}
       />
 
       {/* Floating Trigger on Left Edge when Diagram Drawer is Closed */}
@@ -374,12 +309,6 @@ export const App: React.FC = () => {
           <span>Diagrams & Analytics</span>
         </button>
       )}
-
-      {/* Login Modal for Farm Phone & Password Auth */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setLoginModalOpen(false)}
-      />
 
       {/* Main Workspace Layout */}
       <div className="main-workspace-grid">

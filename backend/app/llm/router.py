@@ -1,3 +1,4 @@
+import os
 import datetime
 import json
 import logging
@@ -110,18 +111,9 @@ class AgentRouter:
         user_text = self.normalize_dairy_phonetics(user_text)
         logger.info(f"[AgentRouter] User Input: '{user_text}' | Farm: {farm_id}")
 
-        # MANDATORY AUTHENTICATION CHECK: Only logged-in farm users can access RAGUL AI!
+        # Direct Farm ID Resolution: If no farm_id is provided, default seamlessly to the configured farm
         if not farm_id or not str(farm_id).strip() or str(farm_id).strip().lower() in {"none", "null", "undefined", "unauthenticated"}:
-            logger.warning(f"[AgentRouter] Blocked unauthenticated inquiry: '{user_text}'. Requiring login.")
-            is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_text)
-            is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_text)
-            if is_tamil:
-                login_msg = "வணக்கம் ஐயா! ரகுல் ஏஐ (RAGUL AI) உங்கள் பண்ணை உதவியாளரை அணுக, தயவுசெய்து உங்கள் பதிவு செய்யப்பட்ட தொலைபேசி எண் மற்றும் கடவுச்சொல் மூலம் உள்நுழையவும் (Login)."
-            elif is_hindi:
-                login_msg = "नमस्ते सर! RAGUL AI और अपने फार्म डेटा को एक्सेस करने के लिए, कृपया अपने पंजीकृत फोन नंबर और पासवर्ड से लॉगिन (Login) करें।"
-            else:
-                login_msg = "Hello Sir! You are currently not logged in. Please log in with your registered phone number and password to access RAGUL AI, your live farm cameras, and cattle records."
-            return login_msg, {"executed": False, "requires_login": True, "tool": None}
+            farm_id = os.getenv("TARGET_FARM_ID", "584cab92-d75d-4aa0-824a-c07423aa6453")
 
         # 0. Immediate Greeting / Identity check - do not dump telemetry on simple hello
         if self._is_greeting_or_introduction(user_text):
