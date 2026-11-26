@@ -35,6 +35,10 @@ DB_SCHEMA_CACHE_TTL_SECONDS = float(os.getenv("RAG_DB_SCHEMA_CACHE_TTL_SECONDS",
 DB_QUERY_TIMEOUT_SECONDS = float(os.getenv("RAG_DB_QUERY_TIMEOUT_SECONDS", "8.0"))
 CHIMERTECH_STORE_URL = os.getenv("CHIMERTECH_STORE_URL", "https://chimertech.shop/").strip()
 
+INVENTORY_TOKENS = frozenset(
+    {"warehouse", "stock", "stok", "inventory", "godown", "store", "storeroom", "bacha", "baki", "remaining"}
+)
+
 RAGUL_SYNTHESIS_SYSTEM_PROMPT = """
 You are RAGUL, the friendly, practical conversational AI supervisor for PashuX Dairy Farms, speaking naturally and directly to the farmer.
 
@@ -53,6 +57,7 @@ You are RAGUL, the friendly, practical conversational AI supervisor for PashuX D
 - When Chimertech catalog products or general supportive/nutritional items appear in context, only reference items explicitly present in the supplied catalog/excerpts without inventing medical claims, clinical cures, or dosages, and follow label directions or veterinarian guidance.
 - Do not fabricate facts, symptoms, dosages, citations, or animal records not present in the retrieved veterinary excerpts or live farm database context.
 - If a requested cow/cattle ID or tag is not found in the live farm database (`"found": false`), state clearly in the user's exact language that no record for that ID or tag exists in the farm database, and offer to check another ID/tag or recent herd records.
+- If the user asks about warehouse, godown, or inventory stock and no inventory records are found, state clearly in the user's exact language that warehouse stock records are not available—never substitute daily cattle feeding logs (`feed_records` or `farm_activities`) as warehouse stock.
 """.strip()
 
 
@@ -343,18 +348,21 @@ class VeterinaryRAGEngine:
         norm_query = (query or "").translate(devanagari_map)
         q_lower = norm_query.lower()
         q_tokens = set(re.findall(r"[a-z0-9_]+", q_lower))
+        is_inventory_query = bool(q_tokens.intersection(INVENTORY_TOKENS))
 
-        num_match = re.search(
-            r"\b(?:(?:cow|cattle|animal)\s+)?(?:id|tag|no|number|cattle[\s_-]?id|camera[\s_-]?id|cow[\s_-]?id|cow|cattle|animal)\s*[:#-]?\s*([A-Za-z0-9_-]*\d[A-Za-z0-9_-]*)\b",
-            q_lower,
-        )
-        if not num_match:
+        num_match = None
+        if not is_inventory_query:
             num_match = re.search(
-                r"(?:गाय|गौ|पशु|மாடு|பசு)\s*[:#-]?\s*([A-Za-z0-9_-]*\d[A-Za-z0-9_-]*)",
-                norm_query,
+                r"\b(?:(?:cow|cattle|animal)\s+)?(?:id|tag|no|number|cattle[\s_-]?id|camera[\s_-]?id|cow[\s_-]?id|cow|cattle|animal)\s*[:#-]?\s*([A-Za-z0-9_-]*\d[A-Za-z0-9_-]*)\b",
+                q_lower,
             )
-        if not num_match:
-            num_match = re.search(r"\b(\d{1,6})\b", q_lower)
+            if not num_match:
+                num_match = re.search(
+                    r"(?:गाय|गौ|पशु|மாடு|பசு)\s*[:#-]?\s*([A-Za-z0-9_-]*\d[A-Za-z0-9_-]*)",
+                    norm_query,
+                )
+            if not num_match:
+                num_match = re.search(r"\b(\d{1,6})\b", q_lower)
 
         raw_code: Optional[str] = num_match.group(1) if num_match else None
         id_val: Optional[int] = int(raw_code) if (raw_code and raw_code.isdigit()) else None
@@ -365,6 +373,11 @@ class VeterinaryRAGEngine:
             tbl_parts = set(tbl_short.split("_"))
             col_names_lower = [c["name"].lower() for c in cols]
 
+            if is_inventory_query and any(
+                bad in tbl_short for bad in ("feed_record", "feeding", "farm_activit", "ration", "nutrition")
+            ):
+                continue
+
             score = 0.0
             score += len(q_tokens.intersection(tbl_parts)) * 3.0
             for cname in col_names_lower:
@@ -373,8 +386,12 @@ class VeterinaryRAGEngine:
                 elif any(part in q_tokens for part in cname.split("_") if len(part) > 2):
                     score += 1.0
 
-            if any(tag in tbl_short for tag in ("analytics", "cattle", "herd", "cow", "milk", "bcs")):
-                score += 0.5
+            if is_inventory_query:
+                if any(k in tbl_short for k in ("inventory", "stock", "warehouse", "godown", "store")):
+                    score += 10.0
+            else:
+                if any(tag in tbl_short for tag in ("analytics", "cattle", "herd", "cow", "milk", "bcs")):
+                    score += 0.5
 
             if raw_code or id_val is not None:
                 if any(re.search(r"(tag|ear)", c) and c != "tag_id" for c in col_names_lower):
@@ -388,6 +405,9 @@ class VeterinaryRAGEngine:
                 score -= 2.0
 
             ranked_tables.append((score, fq_tbl))
+
+        if not ranked_tables:
+            return None
 
         ranked_tables.sort(key=lambda x: x[0], reverse=True)
         best_table = ranked_tables[0][1]
@@ -438,6 +458,7 @@ class VeterinaryRAGEngine:
             "primary_table": best_table,
             "id_val": id_val,
             "raw_code": raw_code,
+            "is_inventory_query": is_inventory_query,
             "plans": candidate_plans,
         }
 
@@ -466,6 +487,17 @@ class VeterinaryRAGEngine:
                     plans: List[Dict[str, Any]] = plan_bundle["plans"]
                     id_val: Optional[int] = plan_bundle["id_val"]
                     raw_code: Optional[str] = plan_bundle.get("raw_code")
+                    is_inv_q: bool = bool(plan_bundle.get("is_inventory_query"))
+
+                    if not plans:
+                        if is_inv_q:
+                            return {
+                                "table": plan_bundle["primary_table"],
+                                "query_type": "warehouse_inventory",
+                                "found": False,
+                                "records": [],
+                            }
+                        return None
 
                     if id_val is not None or raw_code:
                         checked_tables: List[str] = []
@@ -575,6 +607,13 @@ class VeterinaryRAGEngine:
                     sql = f"SELECT {q_cols} FROM {q_tbl}{order_clause} LIMIT 10"
                     rows = await conn.fetch(sql)
                     if not rows:
+                        if is_inv_q:
+                            return {
+                                "table": p0["table"],
+                                "query_type": "warehouse_inventory",
+                                "found": False,
+                                "records": [],
+                            }
                         return None
                     return {
                         "table": p0["table"],
@@ -755,7 +794,8 @@ class VeterinaryRAGEngine:
 
         script_lang = self._detect_script_language(s)
         db_cues = re.search(
-            r"\b(?:bcs|tag|camera|cctv|analytics|herd|milk|weight|record|records|status|id)\b"
+            r"\b(?:bcs|tag|camera|cctv|analytics|herd|milk|weight|record|records|status|id"
+            r"|inventory|stock|stok|warehouse|godown|bacha)\b"
             r"|(?:गाय|गौ|पशु|टैग|स्थिति|रिकॉर्ड|दूध)"
             r"|(?:மாடு|பசு|டேக்|நிலை|பால்|பதிவு)",
             s,
@@ -764,8 +804,6 @@ class VeterinaryRAGEngine:
         needs_db = bool(db_cues)
         has_number = bool(re.search(r"[\d०-९]", s))
 
-        # Fast-route Tamil/Hindi only when querying a specific numeric ID/tag in DB;
-        # otherwise let LLM translate regional veterinary questions into English for hybrid_search.
         if script_lang in ("Tamil (Tamil script)", "Hindi (Devanagari script)") and needs_db and has_number:
             norm_query = f"{s} cattle cow tag status bcs analytics record"
             return {
@@ -779,7 +817,6 @@ class VeterinaryRAGEngine:
         if tokens and all(tok.isascii() for tok in tokens):
             non_ascii_chars = sum(1 for ch in s if not ch.isascii() and not ch.isspace())
             if non_ascii_chars == 0:
-                # Route any Hinglish / Tanglish phrasing to LLM intent detection
                 if re.search(
                     r"\b(?:meri|mera|mere|ka|ki|ke|hai|hain|kaisa|kaisi|kitna|batao|aur|gaay|gaiya|doodh|bimari"
                     r"|enna|epdi|eppadi|irukku|sollu|sollunga|oda|maadu|madu|pasu|paal|illa)\b",
@@ -825,8 +862,8 @@ class VeterinaryRAGEngine:
             'If Hindi or Tamil words/grammar appear mixed with English words (e.g., "Meri cow ka milk yield aur health status kaisa hai?" '
             'or "Enna maadu oda recent BCS record eppadi irukku?"), '
             'classify as "Hinglish (Romanized Hindi)" or "Tanglish (Romanized Tamil)", NOT "English".\n'
-            '2. "needs_db": boolean — true ONLY if the user is asking for live farm records, specific cattle/cow IDs or tags '
-            '(e.g., "cow 1004", "गाय 1004", "மாடு 4"), their own herd\'s BCS/weight/health/milk analytics, camera status, or farmer/village logs. '
+            '2. "needs_db": boolean — true ONLY if the user is asking for live farm records, warehouse/godown inventory stock, specific cattle/cow IDs or tags '
+            '(e.g., "cow 1004", "गाय 1004", "மாடு 4", "warehouse stock"), their own herd\'s BCS/weight/health/milk analytics, camera status, or farmer/village logs. '
             "Set to false for general veterinary disease, symptom, prevention, BCS scale guidelines, medicines/supplements, or nutrition questions.\n"
             '3. "english_query": string — translate and normalize the question into clean, accurate English veterinary/farm terminology '
             "for search retrieval, preserving any animal ID or tag numbers (e.g., 'गाय 1004 की स्थिति बताओ' -> 'Tell me the status of cow ID or tag 1004', "
@@ -1123,9 +1160,10 @@ INSTRUCTIONS:
   - If {detected_language} is "Hinglish (Romanized Hindi)", write the entire answer naturally in Romanized Hindi (Hinglish) using the English alphabet (e.g., "Aapki gaay ka milk yield aur health status..."), NOT pure English and NOT Devanagari script.
   - Speak naturally and directly without adding "Sir" or honorifics.
   - If LIVE SUPABASE FARM DATABASE RECORDS shows `"found": false` for a queried cattle/cow ID or tag, set STATUS to SUFFICIENT (because the live database was checked) and state clearly in {detected_language} that no record was found for that ID or tag in the farm database, without inventing status details.
+  - If LIVE SUPABASE FARM DATABASE RECORDS is for warehouse/inventory stock (`"query_type": "warehouse_inventory"`) and `"found": false`, state clearly in {detected_language} that warehouse stock records are not available in the database—do NOT cite daily feeding records as warehouse stock.
   - If LIVE SUPABASE FARM DATABASE RECORDS includes `related_records`, incorporate relevant details smoothly when answering about that animal.
 2. EVIDENCE STATUS:
-  - SUFFICIENT: The retrieved excerpts, structured NASEM rules, Chimertech catalog matches, or live farm database lookup directly answer the question (including confirming when a queried animal ID or tag does not exist in the DB).
+  - SUFFICIENT: The retrieved excerpts, structured NASEM rules, Chimertech catalog matches, or live farm database lookup directly answer the question (including confirming when a queried animal ID or tag or warehouse stock does not exist in the DB).
   - PARTIAL: The retrieved context supports part of the question, while other requested parts are unsupported.
   - INSUFFICIENT: None of the retrieved context addresses the user's question.
 3. SAFETY, MEDICINES & CHIMERTECH GROUNDING:
