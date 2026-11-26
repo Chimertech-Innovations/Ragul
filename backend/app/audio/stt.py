@@ -26,15 +26,18 @@ except Exception as _av_err:
 
 logger = logging.getLogger("ragul_stt")
 
-# Comprehensive Tanglish, Tamil & Multilingual Context Primer
-TANGLISH_PROMPT = (
-    "Vanakkam ragul, Cow C101 ku feed evvalavu kudukanum, heat alert irukka, inaiku milk yield check pannunga, "
-    "mastitis status enna, enakku oru problem irukku, enna problem na cow C101 ku paal koranjirukku, "
-    "cow status sollunga, Cow COW001, COW002, COW003, CAM01, milk yield, mastitis, estrus, feed ration, green fodder, "
-    "வணக்கம் மாடு பால் அளவு என்ன."
+# Balanced multilingual context primers
+# Tamil script first, Hindi script second, English/Tanglish dairy entities third.
+# Ensures Tamil audio is transcribed into Tamil script, Hindi into Hindi, and English into English without hallucinated translation!
+MULTILINGUAL_PROMPT = (
+    "வணக்கம், பசு மாடு, பால் அளவு, சினைப்பருவம், மாட்டுத் தீவனம், மடிநோய், குவாட்மாஸ்டெஸ்ட், ஈஸ்ட்ரஸ். "
+    "नमस्ते, गाय का दूध उत्पादन, दाना, हीट अलर्ट, मैस्टाइटिस, पशु स्वास्थ्य। "
+    "Cow C101 ku feed evvalavu kudukanum, inaiku milk yield check pannunga, Cow COW001, COW002, CAM01, milk yield, feed ration, green fodder."
 )
-MULTILINGUAL_PROMPT = TANGLISH_PROMPT
-TAMIL_ENGLISH_PROMPT = TANGLISH_PROMPT
+TAMIL_PROMPT = "வணக்கம், பசு மாடு, பால் அளவு, சினைப்பருவம், மாட்டுத் தீவனம், மடிநோய், குவாட்மாஸ்டெஸ்ட், ஈஸ்ட்ரஸ். Cow C101, COW001, CAM01."
+HINDI_PROMPT = "नमस्ते, गाय का दूध उत्पादन, दाना, हीट अलर्ट, मैस्टाइटिस, पशु स्वास्थ्य। Cow C101, COW001."
+ENGLISH_PROMPT = "Cow C101, COW001, CAM01, milk yield, mastitis, estrus heat alert, green fodder, feed ration."
+TAMIL_ENGLISH_PROMPT = MULTILINGUAL_PROMPT
 
 def normalize_target_language(language: Optional[str]) -> Optional[str]:
     """
@@ -145,9 +148,19 @@ async def transcribe_groq_api(
     elif ext == "webm":
         mime = "audio/webm"
 
+    # Select optimal prompt based on target language
+    if target_lang == "ta":
+        selected_prompt = TAMIL_PROMPT
+    elif target_lang == "hi":
+        selected_prompt = HINDI_PROMPT
+    elif target_lang == "en":
+        selected_prompt = ENGLISH_PROMPT
+    else:
+        selected_prompt = MULTILINGUAL_PROMPT
+
     data: Dict[str, Any] = {
         "model": model_name,
-        "prompt": MULTILINGUAL_PROMPT,
+        "prompt": selected_prompt,
         "response_format": "verbose_json",
         "temperature": "0.0"
     }
