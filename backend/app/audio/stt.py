@@ -1,6 +1,7 @@
 import asyncio
 import os
 import io
+import re
 import wave
 import tempfile
 import logging
@@ -25,18 +26,24 @@ except Exception as _av_err:
 
 logger = logging.getLogger("ragul_stt")
 
-# Context Primer strictly for Tamil & English / Tanglish Dairy Speech
-# (Hindi is explicitly excluded so Whisper never hallucinates Hindi)
-TAMIL_ENGLISH_PROMPT = (
+# Comprehensive Multilingual Context Primer
+# Covers Tanglish (Romanized Tamil), Tamil script, Hinglish, Hindi script, and English Dairy terms
+MULTILINGUAL_PROMPT = (
+    # Tanglish (Romanized Tamil + English Dairy entities)
+    "Cow C101 ku feed evvalavu kudukanum, heat alert irukka, inaiku milk yield check pannunga, mastitis status enna. "
+    "Cow COW001, COW002, COW003, CAM01, milk yield, mastitis, estrus, feed ration, green fodder. "
+    # Tamil Script
     "வணக்கம் ரகுல், பசு மாடு, பால் அளவு, சினைப் பருவம், மாட்டுத் தீவனம், மடிநோய், குவாட்மாஸ்டெஸ்ட், ஈஸ்ட்ரஸ். "
-    "Cow C101, COW001, COW002, COW003, CAM01, milk yield, mastitis, CMT paddle, estrus, feed ration, green fodder. "
-    "Cow C101 ku feed evvalavu kudukanum, heat alert irukka, inaiku status enna."
+    # Hinglish & Hindi Script
+    "नमस्ते, Cow C101 ka feed kitna dena hai, doodh kitna hai, heat alert hai kya, status bataiye. "
+    "गाय का दूध उत्पादन, दाना, हीट अलर्ट, मैस्टाइटिस, पशु स्वास्थ्य।"
 )
+TAMIL_ENGLISH_PROMPT = MULTILINGUAL_PROMPT
 
 def normalize_target_language(language: Optional[str]) -> Optional[str]:
     """
     Normalizes input language strings.
-    If 'auto', 'tanglish', 'multilingual', or empty: returns None (triggers smart Tamil vs English detection).
+    If 'auto', 'tanglish', 'multilingual', or empty: returns None (triggers automatic multi-language detection).
     """
     if not language:
         return None
@@ -47,7 +54,57 @@ def normalize_target_language(language: Optional[str]) -> Optional[str]:
         return "ta"
     if lang_clean in {"en", "english"}:
         return "en"
+    if lang_clean in {"hi", "hindi", "hinglish"}:
+        return "hi"
+    if lang_clean in {"te", "telugu"}:
+        return "te"
+    if lang_clean in {"kn", "kannada"}:
+        return "kn"
+    if lang_clean in {"ml", "malayalam"}:
+        return "ml"
     return lang_clean
+
+def detect_language_from_text(text: str, whisper_detected_lang: Optional[str] = None) -> str:
+    """
+    Intelligently identifies the language and script of the transcribed text:
+    - Tamil script (அ-ஔ) -> 'ta'
+    - Hindi / Devanagari script (अ-ह) -> 'hi'
+    - Tanglish (Romanized Tamil words like ku, evvalavu, irukka, etc.) -> 'tanglish'
+    - Hinglish (Romanized Hindi words like kitna, hai, doodh, etc.) -> 'hinglish'
+    - English / other -> 'en' (or whisper detected code)
+    """
+    if not text or not text.strip():
+        return whisper_detected_lang or "en"
+
+    # 1. Native script detection
+    if any('\u0B80' <= c <= '\u0BFF' for c in text):
+        return "ta"
+    if any('\u0900' <= c <= '\u097F' for c in text):
+        return "hi"
+
+    # 2. Romanized Indian Languages Check (Tanglish & Hinglish)
+    lower = text.lower()
+    tanglish_words = {
+        "ku", "kudunga", "kudukanum", "evvalavu", "evlo", "irukka", "irukku", "inaiku", "inniku",
+        "pannunga", "pannalam", "sollunga", "paal", "maadu", "theevanam", "thannir", "enga",
+        "eppadi", "eppo", "aachu", "nadandhuchu", "oda", "paththi", "sonna", "nalla", "enna",
+        "seri", "illa", "illai", "paravala", "vandhucha", "kidaikuma"
+    }
+    tokens = set(re.findall(r'\b[a-z]+\b', lower))
+    if len(tokens.intersection(tanglish_words)) >= 1:
+        return "tanglish"
+
+    hinglish_words = {
+        "hai", "ka", "ki", "ke", "ko", "kitna", "kitni", "kitne", "dena", "karo", "karna",
+        "bataiye", "batao", "doodh", "gai", "kya", "aaj", "pehle", "kahan", "kaise", "hota"
+    }
+    if len(tokens.intersection(hinglish_words)) >= 1:
+        return "hinglish"
+
+    if whisper_detected_lang in {"ta", "hi", "en", "te", "kn", "ml"}:
+        return whisper_detected_lang
+
+    return "en"
 
 def pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000) -> bytes:
     """Encodes raw 16-bit mono PCM into standard WAV bytes in memory."""
@@ -66,7 +123,7 @@ async def transcribe_groq_api(
 ) -> Optional[Dict[str, Any]]:
     """
     Ultra-Fast (~0.2s - 0.5s) Cloud Whisper STT using Groq LPU API.
-    Zero server RAM usage, high accuracy for Tamil, Tanglish, and English.
+    Zero server RAM usage, high accuracy across Tamil, Tanglish, Hindi, and English.
     """
     groq_api_key = getattr(settings, "GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", "")
     if not groq_api_key or not groq_api_key.strip():
@@ -94,7 +151,7 @@ async def transcribe_groq_api(
 
     data: Dict[str, Any] = {
         "model": model_name,
-        "prompt": TAMIL_ENGLISH_PROMPT,
+        "prompt": MULTILINGUAL_PROMPT,
         "response_format": "verbose_json",
         "temperature": "0.0"
     }
@@ -114,17 +171,15 @@ async def transcribe_groq_api(
         if resp.status_code == 200:
             result = resp.json()
             text = result.get("text", "").strip()
-            detected_lang = result.get("language", target_lang or "ta")
+            raw_lang = result.get("language")
+            detected_lang = detect_language_from_text(text, raw_lang)
             duration = result.get("duration", 0)
 
-            # Block false Hindi detection on Tamil/Tanglish speech
-            if detected_lang == "hi":
-                detected_lang = "ta"
-
-            logger.info(f"[STT-Groq] Cloud Whisper completed in {elapsed}s: '{text}' (lang={detected_lang})")
+            logger.info(f"[STT-Groq] Cloud Whisper completed in {elapsed}s: '{text}' (lang={detected_lang}, raw={raw_lang})")
             return {
                 "text": text,
                 "language": detected_lang,
+                "raw_language": raw_lang,
                 "confidence": 0.95 if text else 0.0,
                 "quality": "good" if text else "no_speech",
                 "duration": duration or elapsed,
@@ -225,27 +280,19 @@ class FasterWhisperSTT:
 
             duration_sec = round(len(audio_np) / 16000.0, 2)
 
-            # 2. Smart Language Filter:
-            # If language is auto/tanglish/None, strictly select between 'ta' (Tamil) and 'en' (English).
-            # Hindi ('hi') is prevented from falsely hijacking the Tamil speech!
+            # 2. Multilingual Language Handling:
+            # If target_lang is None (auto), let whisper detect audio language dynamically (ta, hi, en, etc.)
             if target_lang is None:
                 try:
                     _, _, all_probs = self.model.detect_language(audio_np)
                     p_dict = dict(all_probs)
-                    ta_prob = p_dict.get("ta", 0.0)
-                    en_prob = p_dict.get("en", 0.0)
-                    hi_prob = p_dict.get("hi", 0.0)
-
-                    # If clear English (>0.60 probability), use 'en'; otherwise default to 'ta' (Tamil/Tanglish)
-                    if en_prob > 0.60 and ta_prob < 0.20:
-                        target_lang = "en"
-                    else:
-                        target_lang = "ta"
-
-                    logger.info(f"[STT] Filtered Language Probs: ta={ta_prob:.2f}, en={en_prob:.2f}, hi(blocked)={hi_prob:.2f} -> Chosen: '{target_lang}'")
+                    top_candidate = max(p_dict.items(), key=lambda x: x[1])[0]
+                    if top_candidate in {"ta", "en", "hi", "te", "kn", "ml"}:
+                        target_lang = top_candidate
+                    logger.info(f"[STT] Auto-detected Speech Language: '{target_lang}' (probs: ta={p_dict.get('ta', 0):.2f}, en={p_dict.get('en', 0):.2f}, hi={p_dict.get('hi', 0):.2f})")
                 except Exception as detect_err:
-                    logger.warning(f"[STT] Language detection failed: {detect_err}. Defaulting to 'ta'.")
-                    target_lang = "ta"
+                    logger.warning(f"[STT] Language detection failed: {detect_err}.")
+                    target_lang = None
 
             # 3. Fast Single-Pass Transcription with Native VAD Filter & Greedy Decoding (~2s)
             segments_gen, info = self.model.transcribe(
@@ -263,14 +310,14 @@ class FasterWhisperSTT:
                     speech_pad_ms=200
                 ),
                 condition_on_previous_text=False,
-                initial_prompt=TAMIL_ENGLISH_PROMPT
+                initial_prompt=MULTILINGUAL_PROMPT
             )
             segments = list(segments_gen)
 
             if not segments:
                 return {
                     "text": "",
-                    "language": target_lang,
+                    "language": target_lang or "en",
                     "confidence": 0.0,
                     "quality": "no_speech",
                     "duration": duration_sec
@@ -284,11 +331,13 @@ class FasterWhisperSTT:
             is_low_quality = (no_speech_prob > 0.70) or (avg_logprob < -1.8) or (confidence < 0.25) or (len(text) < 2)
             quality = "low_confidence" if is_low_quality else "good"
 
-            logger.info(f"[STT] Transcribed ({duration_sec}s): '{text}' | Lang: '{target_lang}' | Conf: {confidence:.2f}")
+            final_lang = detect_language_from_text(text, target_lang)
+            logger.info(f"[STT] Transcribed ({duration_sec}s): '{text}' | Lang: '{final_lang}' (whisper={target_lang}) | Conf: {confidence:.2f}")
 
             return {
                 "text": text,
-                "language": target_lang,
+                "language": final_lang,
+                "raw_language": target_lang,
                 "confidence": round(confidence, 2),
                 "no_speech_prob": round(no_speech_prob, 2),
                 "avg_logprob": round(avg_logprob, 2),

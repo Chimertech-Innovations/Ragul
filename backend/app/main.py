@@ -38,7 +38,7 @@ from .tools.farm_tools import (
 from .llm.router import tool_router
 from .memory.session_manager import session_manager
 from .audio.vad import vad_processor
-from .audio.stt import stt_engine
+from .audio.stt import stt_engine, detect_language_from_text
 from .audio.tts import tts_engine
 
 logging.basicConfig(level=logging.INFO)
@@ -398,6 +398,7 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
     """
     user_text = ""
     stt_conf = None
+    detected_lang = "en"
 
     if request.audio_base64 and request.audio_base64.strip():
         try:
@@ -409,11 +410,17 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
             )
             user_text = stt_res.get("text", "").strip()
             stt_conf = stt_res.get("confidence")
+            detected_lang = stt_res.get("language") or "en"
         except Exception as ex:
             logger.error(f"[ChatAPI] Error decoding base64 audio: {ex}")
             raise HTTPException(status_code=400, detail="Invalid audio_base64 data.")
     elif request.message and request.message.strip():
         user_text = request.message.strip()
+        req_lang = request.language
+        if req_lang and req_lang.lower() not in {"auto", "all", "multilingual", "none", "null"}:
+            detected_lang = req_lang
+        else:
+            detected_lang = detect_language_from_text(user_text)
 
     if not user_text:
         raise HTTPException(
@@ -424,12 +431,12 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
     session_id = await session_manager.get_or_create_session(request.session_id)
     history = await session_manager.get_recent_history(session_id)
 
-    # Save user message
+    # Save user message with accurate detected language (ta, tanglish, hi, hinglish, en)
     await session_manager.save_message(
         session_id=session_id,
         role="user",
         content=user_text,
-        detected_language=request.language or "tanglish"
+        detected_language=detected_lang
     )
 
     # Process with custom Agent Router
@@ -449,7 +456,7 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         content=response_text,
         tool_calls=tool_meta.get("arguments") if tool_meta else None,
         tool_results=tool_meta.get("result") if tool_meta else None,
-        detected_language=request.language or "tanglish"
+        detected_language=detected_lang
     )
 
     # Generate playable TTS Audio HTTP Link & Optional Base64
@@ -457,11 +464,11 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
     clean_speech_snippet = clean_speech[:350].strip()
     encoded_query = urllib.parse.quote_plus(clean_speech_snippet)
     base_url = str(http_req.base_url).rstrip("/")
-    audio_url = f"{base_url}/api/tts?text={encoded_query}&language={request.language or 'en'}"
+    audio_url = f"{base_url}/api/tts?text={encoded_query}&language={detected_lang}"
 
     audio_b64 = None
     if request.return_audio_base64 and clean_speech:
-        tts_res = await tts_engine.synthesize(clean_speech_snippet, request.language or "en")
+        tts_res = await tts_engine.synthesize(clean_speech_snippet, detected_lang)
         audio_b64 = tts_res.get("audio_base64")
 
     return ChatResponse(
@@ -473,7 +480,7 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         audio_base64=audio_b64,
         tool_meta=tool_meta if (tool_meta and tool_meta.get("executed")) else None,
         proof_images=proof_images,
-        detected_language=request.language or "tanglish",
+        detected_language=detected_lang,
         stt_confidence=stt_conf
     )
 
