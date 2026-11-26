@@ -1,10 +1,10 @@
 
+import os
 import json
 import re
 import chromadb
 
 from pathlib import Path
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from rank_bm25 import BM25Okapi
 
 
@@ -27,73 +27,65 @@ CANDIDATE_K = 20
 
 
 # ==========================================
-# 2. LOAD EMBEDDING MODEL
+# 2. LAZY-LOADED RESOURCES (SAVES 600MB RAM ON BOOT)
 # ==========================================
 
-print("Loading embedding model...", flush=True)
+_model = None
+_reranker = None
+_client = None
+_collection = None
+_chunks = None
+_bm25 = None
 
-model = SentenceTransformer(MODEL_NAME)
+def _get_model():
+    global _model
+    if _model is None:
+        print("[RAG] Loading embedding model on demand...", flush=True)
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer(MODEL_NAME)
+    return _model
 
+def _get_reranker():
+    global _reranker
+    if os.getenv("DISABLE_RERANKER", "true").lower() in {"1", "true", "yes"}:
+        return None
+    if _reranker is None:
+        try:
+            print("[RAG] Loading cross-encoder reranker on demand...", flush=True)
+            from sentence_transformers import CrossEncoder
+            _reranker = CrossEncoder(RERANKER_NAME)
+        except Exception as e:
+            print(f"[RAG] Skipping cross-encoder reranker to save RAM: {e}", flush=True)
+            _reranker = None
+    return _reranker
 
-# ==========================================
-# 3. LOAD RERANKING MODEL
-# ==========================================
+def _get_collection():
+    global _client, _collection
+    if _collection is None:
+        if not DB_PATH.exists():
+            return None
+        _client = chromadb.PersistentClient(path=str(DB_PATH))
+        _collection = _client.get_or_create_collection(name=COLLECTION_NAME)
+    return _collection
 
-print("Loading cross-encoder reranking model...", flush=True)
+def _get_chunks():
+    global _chunks
+    if _chunks is None:
+        _chunks = []
+        if CHUNKS_FILE.exists():
+            with open(CHUNKS_FILE, "r", encoding="utf-8") as file:
+                for line in file:
+                    if line.strip():
+                        _chunks.append(json.loads(line))
+    return _chunks
 
-reranker = CrossEncoder(RERANKER_NAME)
-
-print("Reranking model loaded!", flush=True)
-
-
-# ==========================================
-# 4. CONNECT TO CHROMADB
-# ==========================================
-
-print(f"Connecting to ChromaDB at: {DB_PATH}", flush=True)
-
-if not DB_PATH.exists():
-    raise FileNotFoundError(
-        f"ChromaDB directory not found: {DB_PATH}"
-    )
-
-client = chromadb.PersistentClient(
-    path=str(DB_PATH)
-)
-
-collection = client.get_or_create_collection(
-    name=COLLECTION_NAME
-)
-
-print(
-    f"ChromaDB connected! "
-    f"Collection contains {collection.count()} chunks.",
-    flush=True
-)
-
-
-# ==========================================
-# 5. LOAD DOCUMENT CHUNKS
-# ==========================================
-
-print(f"Loading document chunks from: {CHUNKS_FILE}", flush=True)
-
-if not CHUNKS_FILE.exists():
-    raise FileNotFoundError(
-        f"chunks.jsonl not found: {CHUNKS_FILE}"
-    )
-
-chunks = []
-
-with open(CHUNKS_FILE, "r", encoding="utf-8") as file:
-    for line in file:
-        if line.strip():
-            chunks.append(json.loads(line))
-
-if not chunks:
-    raise ValueError("No document chunks found!")
-
-print(f"Loaded {len(chunks)} chunks!", flush=True)
+def _get_bm25():
+    global _bm25
+    if _bm25 is None:
+        chunks_list = _get_chunks()
+        tokenized_corpus = [tokenize(item["text"]) for item in chunks_list]
+        _bm25 = BM25Okapi(tokenized_corpus)
+    return _bm25
 
 
 # ==========================================
@@ -181,54 +173,34 @@ def expand_query(question, verbose=False):
 
 
 # ==========================================
-# 8. INITIALIZE BM25
-# ==========================================
-
-print("Building BM25 index...", flush=True)
-
-tokenized_corpus = [
-    tokenize(item["text"])
-    for item in chunks
-]
-
-bm25 = BM25Okapi(tokenized_corpus)
-
-print("BM25 index ready!", flush=True)
-
-print(
-    "Hybrid retrieval and reranking system initialized!",
-    flush=True
-)
-
-
-# ==========================================
-# 9. VECTOR SEARCH
+# 8. VECTOR SEARCH
 # ==========================================
 
 def vector_search(query, top_k=20):
+    coll = _get_collection()
+    if coll is None:
+        return []
 
-    collection_count = collection.count()
-
+    collection_count = coll.count()
     if collection_count == 0:
         return []
 
-    query_embedding = model.encode(
+    model_inst = _get_model()
+    query_embedding = model_inst.encode(
         query,
         normalize_embeddings=True
     ).tolist()
 
-    results = collection.query(
+    results = coll.query(
         query_embeddings=[query_embedding],
         n_results=min(top_k, collection_count)
     )
 
     retrieved_chunks = []
-
     if not results["documents"] or not results["documents"][0]:
         return retrieved_chunks
 
     for i in range(len(results["documents"][0])):
-
         retrieved_chunks.append({
             "id": results["ids"][0][i],
             "text": results["documents"][0][i],
@@ -240,17 +212,16 @@ def vector_search(query, top_k=20):
 
 
 # ==========================================
-# 10. BM25 KEYWORD SEARCH
+# 9. BM25 KEYWORD SEARCH
 # ==========================================
 
 def bm25_search(query, top_k=20):
-
     tokenized_query = tokenize(query)
-
     if not tokenized_query:
         return []
 
-    scores = bm25.get_scores(tokenized_query)
+    bm25_inst = _get_bm25()
+    scores = bm25_inst.get_scores(tokenized_query)
 
     ranked_indices = sorted(
         range(len(scores)),
@@ -258,15 +229,14 @@ def bm25_search(query, top_k=20):
         reverse=True
     )
 
+    chunks_list = _get_chunks()
     retrieved_chunks = []
 
     for index in ranked_indices:
-
         if scores[index] <= 0:
             continue
 
-        item = chunks[index]
-
+        item = chunks_list[index]
         retrieved_chunks.append({
             "id": item["id"],
             "text": item["text"],
@@ -371,42 +341,49 @@ def rerank_results(
     verbose=False
 ):
 
-    if verbose:
-        print(
-            "\nReranking retrieved passages...",
-            flush=True
-        )
-
     if not candidates:
         return []
 
-    pairs = [
-        (question, candidate["text"])
-        for candidate in candidates
-    ]
+    reranker_inst = _get_reranker()
+    if reranker_inst is not None:
+        if verbose:
+            print(
+                "\nReranking retrieved passages with CrossEncoder...",
+                flush=True
+            )
 
-    scores = reranker.predict(
-        pairs,
-        batch_size=32,
-        show_progress_bar=False
-    )
+        pairs = [
+            (question, candidate["text"])
+            for candidate in candidates
+        ]
 
-    reranked_results = []
+        scores = reranker_inst.predict(
+            pairs,
+            batch_size=16,
+            show_progress_bar=False
+        )
 
-    for candidate, score in zip(candidates, scores):
+        reranked_results = []
 
-        candidate = candidate.copy()
+        for candidate, score in zip(candidates, scores):
 
-        candidate["rerank_score"] = float(score)
+            candidate = candidate.copy()
 
-        reranked_results.append(candidate)
+            candidate["rerank_score"] = float(score)
 
-    reranked_results.sort(
-        key=lambda item: item["rerank_score"],
-        reverse=True
-    )
+            reranked_results.append(candidate)
 
-    return reranked_results[:top_k]
+        reranked_results.sort(
+            key=lambda item: item["rerank_score"],
+            reverse=True
+        )
+
+        return reranked_results[:top_k]
+    else:
+        # High-efficiency RRF ranking (saves 250MB RAM on free servers)
+        for candidate in candidates:
+            candidate["rerank_score"] = candidate.get("rrf_score", 0.0)
+        return candidates[:top_k]
 
 
 # ==========================================
