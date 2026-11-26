@@ -100,8 +100,20 @@ def detect_language_from_text(text: str, whisper_detected_lang: Optional[str] = 
     if len(tokens.intersection(hinglish_words)) >= 1:
         return "hinglish"
 
-    if whisper_detected_lang in {"ta", "hi", "en", "te", "kn", "ml"}:
-        return whisper_detected_lang
+    if whisper_detected_lang:
+        wl = str(whisper_detected_lang).strip().lower()
+        if "tamil" in wl or wl == "ta":
+            return "ta"
+        if "hindi" in wl or wl == "hi":
+            return "hi"
+        if "telugu" in wl or wl == "te":
+            return "te"
+        if "kannada" in wl or wl == "kn":
+            return "kn"
+        if "malayalam" in wl or wl == "ml":
+            return "ml"
+        if "english" in wl or wl == "en":
+            return "en"
 
     return "en"
 
@@ -148,24 +160,23 @@ async def transcribe_groq_api(
     elif ext == "webm":
         mime = "audio/webm"
 
-    # Select optimal prompt based on target language
-    if target_lang == "ta":
-        selected_prompt = TAMIL_PROMPT
-    elif target_lang == "hi":
-        selected_prompt = HINDI_PROMPT
-    elif target_lang == "en":
-        selected_prompt = ENGLISH_PROMPT
-    else:
-        selected_prompt = MULTILINGUAL_PROMPT
-
     data: Dict[str, Any] = {
         "model": model_name,
-        "prompt": selected_prompt,
         "response_format": "verbose_json",
         "temperature": "0.0"
     }
+
+    # Only pass prompt or language when explicitly targeted.
+    # When target_lang is None (auto), omitting the prompt allows Whisper's neural detector
+    # to naturally detect Tamil, Hindi, or English without translating into English!
     if target_lang:
         data["language"] = target_lang
+        if target_lang == "ta":
+            data["prompt"] = TAMIL_PROMPT
+        elif target_lang == "hi":
+            data["prompt"] = HINDI_PROMPT
+        elif target_lang == "en":
+            data["prompt"] = ENGLISH_PROMPT
 
     files = {
         "file": (filename, audio_bytes, mime)
