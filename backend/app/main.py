@@ -439,12 +439,13 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         detected_language=detected_lang
     )
 
-    # Process with custom Agent Router
+    # Process with custom Agent Router with language context
     response_text, tool_meta = await tool_router.process_user_message(
         user_text=user_text,
         history=history,
         session_id=session_id,
-        farm_id=request.farm_id
+        farm_id=request.farm_id,
+        detected_language=detected_lang
     )
 
     proof_images = tool_meta.get("proof_images") if tool_meta else None
@@ -550,7 +551,8 @@ async def chat_audio_upload_endpoint(
         user_text=transcribed_text,
         history=history,
         session_id=session_id,
-        farm_id=farm_id
+        farm_id=farm_id,
+        detected_language=detected_lang
     )
 
     proof_images = tool_meta.get("proof_images") if tool_meta else None
@@ -683,17 +685,19 @@ async def websocket_voice_endpoint(websocket: WebSocket):
                     })
 
                     history = await session_manager.get_recent_history(session_id)
+                    stt_lang = stt_result.get("language", "auto")
                     response_text, tool_meta = await tool_router.process_user_message(
                         user_text=user_text,
                         history=history,
                         session_id=session_id,
-                        farm_id=client_farm_id
+                        farm_id=client_farm_id,
+                        detected_language=stt_lang
                     )
                     
                     proof_images = tool_meta.get("proof_images") if tool_meta else None
                     clean_snippet = re.sub(r'[*_#`~]', '', response_text)[:300].strip()
                     encoded_q = urllib.parse.quote_plus(clean_snippet)
-                    audio_link = f"/api/tts?text={encoded_q}&language={stt_result.get('language', 'en')}"
+                    audio_link = f"/api/tts?text={encoded_q}&language={stt_lang}"
 
                     await websocket.send_json({
                         "type": "agent_response",
@@ -705,7 +709,7 @@ async def websocket_voice_endpoint(websocket: WebSocket):
                     })
                     
                     # Synthesize and stream binary speech bytes
-                    tts_audio = await tts_engine.synthesize_speech(response_text)
+                    tts_audio = await tts_engine.synthesize_speech(response_text, language=stt_lang)
                     if tts_audio:
                         await websocket.send_bytes(tts_audio)
                     
