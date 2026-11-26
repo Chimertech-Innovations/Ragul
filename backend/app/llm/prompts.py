@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -167,12 +167,30 @@ STRICT ACCURACY & RELEVANCE RULES:
 """
 
 
-def build_agent_messages(history: List[Dict[str, str]], current_input: str) -> List[Dict[str, Any]]:
+def build_agent_messages(history: List[Dict[str, str]], current_input: str, language: Optional[str] = None) -> List[Dict[str, Any]]:
     """Builds structured messages with system prompt, real-time context, conversation history, and user input."""
     now_ist = datetime.datetime.now(IST)
     curr_time_str = now_ist.strftime("%A, %d %B %Y, %I:%M %p IST")
     today_str = now_ist.strftime("%Y-%m-%d")
     yesterday_str = (now_ist - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+    lang_note = ""
+    if language == "tanglish":
+        lang_note = (
+            "\n\n🔥 CRITICAL LANGUAGE REQUIREMENT: The user is speaking in TANGLISH (Tamil words written in English letters).\n"
+            "You MUST respond entirely in natural, conversational TANGLISH (e.g. 'Cow C101-ku inaiku 5 kg green fodder kudunga, milk yield 12 litres irukku, heat alert illa').\n"
+            "DO NOT translate into pure English! Speak in Tanglish as requested."
+        )
+    elif language in {"ta", "tamil"}:
+        lang_note = (
+            "\n\n🔥 CRITICAL LANGUAGE REQUIREMENT: The user is speaking in TAMIL.\n"
+            "You MUST respond entirely in Tamil script (தமிழ்). DO NOT translate into English!"
+        )
+    elif language in {"hi", "hindi", "hinglish"}:
+        lang_note = (
+            "\n\n🔥 CRITICAL LANGUAGE REQUIREMENT: The user is speaking in HINDI/HINGLISH.\n"
+            "You MUST respond entirely in Hindi/Hinglish. DO NOT translate into English!"
+        )
 
     realtime_context = (
         f"{MAIN_SYSTEM_PROMPT}\n\n"
@@ -181,6 +199,7 @@ def build_agent_messages(history: List[Dict[str, str]], current_input: str) -> L
         f"• Today's Date: {today_str} ({now_ist.strftime('%d %B %Y')})\n"
         f"• Yesterday's Date: {yesterday_str} ({(now_ist - datetime.timedelta(days=1)).strftime('%d %B %Y')})\n"
         f"• RULE: Distinguish TODAY vs YESTERDAY strictly. Today has 0 detections; yesterday had 11 detections. Never report yesterday as today."
+        f"{lang_note}"
     )
 
     messages: List[Dict[str, Any]] = [

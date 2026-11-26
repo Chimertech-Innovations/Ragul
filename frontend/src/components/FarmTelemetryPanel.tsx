@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Flame, Droplets, Camera, Video, Sparkles, Building2, Eye } from 'lucide-react';
+import { Flame, Camera, Building2 } from 'lucide-react';
 import { useRagulStore } from '../store/useRagulStore';
 
 export const FarmTelemetryPanel: React.FC = () => {
-  const { farmOverview, setFarmOverview, currentUser } = useRagulStore();
+  const { farmOverview, setFarmOverview, farmId } = useRagulStore();
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchFarmOverview = async () => {
       try {
-        const farmParam = currentUser?.farm_id ? `?farm_id=${currentUser.farm_id}` : '';
+        const farmParam = farmId ? `?farm_id=${farmId}` : '';
         const res = await fetch(`/api/farm/overview${farmParam}`);
         if (res.ok) {
           const data = await res.json();
@@ -29,7 +29,7 @@ export const FarmTelemetryPanel: React.FC = () => {
     fetchFarmOverview();
     const interval = setInterval(fetchFarmOverview, 8000);
     return () => clearInterval(interval);
-  }, [currentUser?.farm_id, setFarmOverview]);
+  }, [farmId, setFarmOverview]);
 
   return (
     <aside className="sidebar-panel">
@@ -40,10 +40,10 @@ export const FarmTelemetryPanel: React.FC = () => {
             <Building2 size={20} className="text-cyan-400" />
           </div>
           <div>
-            <div className="farm-card-name">{farmOverview?.farm_name || currentUser?.farm_name || 'PashuX Dairy Farm'}</div>
+            <div className="farm-card-name">{farmOverview?.farm_name || 'PashuX AI Dairy Farm'}</div>
             <div className="farm-card-code">
-              Code: <strong>{farmOverview?.farm_code || currentUser?.farm_code || 'FARM_B01F3C'}</strong>
-              {currentUser?.owner_name && ` • Owner: ${currentUser.owner_name}`}
+              Code: <strong>{farmOverview?.farm_code || 'FARM_MAIN'}</strong>
+              {farmOverview?.owner_name && ` • Owner: ${farmOverview.owner_name}`}
             </div>
           </div>
           <span className="live-status-pill">LIVE AI</span>

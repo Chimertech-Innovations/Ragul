@@ -355,17 +355,85 @@ erDiagram
 
 ---
 
-## 📡 REST & WebSocket API Reference
+## 📡 REST & WebSocket API Reference (Mobile App & Web Integration)
 
-### 1. Authentication Endpoints
+The RAGUL chatbot backend provides zero-friction endpoints designed specifically for mobile apps (Flutter, React Native, iOS Swift, Android Kotlin) and web apps. **No login or complex auth tokens are required.**
 
-- **`POST /api/auth/login`**
-  - **Body**: `{"phone": "+919876543210", "password": "farmerpassword"}`
-  - **Response**: Authenticated user record with associated `farm_id`, `farm_code`, and `role`.
-- **`POST /api/auth/register`**
-  - **Body**: `{"phone": "9876543210", "password": "...", "full_name": "...", "farm_name": "..."}`
-- **`POST /api/auth/reset-password`**
-  - **Body**: `{"phone": "9876543210", "new_password": "..."}`
+---
+
+### 1. Mobile App Chatbot Endpoints (Audio & Text)
+
+#### 🎙️ A. Voice Chat Endpoint (Upload Recorded Audio File)
+* **Endpoint**: `POST /api/chat/audio` (or `POST /api/chat/voice`)
+* **Content-Type**: `multipart/form-data`
+* **Description**: The mobile app records audio from the phone mic and sends the file (`.m4a`, `.wav`, `.mp3`, `.aac`, `.ogg`, `.webm`). The backend automatically transcribes the audio to text using multilingual `faster-whisper`, feeds the query to the LLM agent router, and returns the response.
+* **Form Fields**:
+  - `file`: The recorded audio file (Required)
+  - `session_id`: (Optional) Existing conversation session ID to preserve chat history
+  - `language`: (Optional) `"tanglish"`, `"ta"`, `"hi"`, or `"en"` (Default: `"tanglish"`)
+  - `farm_id`: (Optional) Target farm UUID (Defaults to server configured farm)
+* **Response (JSON)**:
+  ```json
+  {
+    "status": "success",
+    "session_id": "session_abc123",
+    "transcript": "Cow 12 ku milk production evlo irukku?",
+    "response": "Sir, Cow 12 yesterday gave 14.5 Litres of milk. Today morning session reading is 7.2 Litres.",
+    "detected_language": "ta",
+    "stt_confidence": 0.94,
+    "duration": 3.2,
+    "tool_meta": { ... },
+    "proof_images": [ ... ]
+  }
+  ```
+
+#### 💬 B. Text / Base64 Audio Chat Endpoint
+* **Endpoint**: `POST /api/chat`
+* **Content-Type**: `application/json`
+* **Description**: Send plain text or base64-encoded audio.
+* **Request Body (JSON)**:
+  ```json
+  {
+    "message": "What is the herd count in the farm?",
+    "session_id": "optional-session-id",
+    "language": "tanglish",
+    "farm_id": "optional-farm-id"
+  }
+  ```
+  *(Or send base64 audio: `{"audio_base64": "<base64_data>", "filename": "voice.m4a"}`)*
+* **Response (JSON)**:
+  ```json
+  {
+    "status": "success",
+    "session_id": "session_abc123",
+    "user_text": "What is the herd count in the farm?",
+    "response": "Sir, your farm currently has 42 registered cattle...",
+    "detected_language": "en",
+    "tool_meta": { ... },
+    "proof_images": [ ... ]
+  }
+  ```
+
+#### 🔊 C. Text-to-Speech (TTS) Direct Playable Audio Link
+* **Endpoint**: `GET /api/tts?text={text}&language={language}`
+* **Response**: Real-time MP3 binary stream (`audio/mpeg`).
+* **Direct Browser / Player Usage**:
+  You can plug this link directly into any `<audio>` HTML tag or mobile media player:
+  ```html
+  <audio src="http://localhost:8000/api/tts?text=Hello+Sir+how+are+you&language=en" autoplay controls />
+  ```
+* **Flutter / Mobile App Usage**:
+  ```dart
+  final audioUrl = "http://<server-ip>:8000/api/tts?text=${Uri.encodeComponent(answerText)}&language=en";
+  await player.play(UrlSource(audioUrl));
+  ```
+
+#### 🎙️ D. Standalone Input Speech-to-Text (STT) Endpoint
+* **Endpoint**: `POST /api/stt`
+* **Content-Type**: `multipart/form-data`
+* **Description**: Upload an audio file to get high-accuracy multilingual transcription without querying the LLM.
+
+---
 
 ### 2. Telemetry & Analytics Endpoints
 
@@ -380,14 +448,12 @@ erDiagram
 - **`GET /api/media/image?path={storage_path}`**
   - Authenticated proxy delivering CCTV detection proof snapshots from private Supabase Storage.
 
-### 3. Dialogue & Voice Endpoints
+---
 
-- **`POST /api/chat`**
-  - Standard text chat endpoint.
-  - **Body**: `{"message": "How many cattle are in the farm?", "farm_id": "...", "language": "tanglish"}`
-  - **Response**: Assistant response text, executed `tool_meta`, and camera `proof_images`.
+### 3. Real-Time WebSocket Voice & Interruption Stream
+
 - **`WebSocket /api/ws/voice`** (or `/ws/audio`)
-  - Full-duplex audio stream for live voice conversations.
+  - Full-duplex audio stream for live voice conversations with real-time barge-in interruption.
   - **Client to Server**:
     - Raw 16kHz 16-bit Mono PCM audio chunks (binary frames).
     - JSON control messages:
@@ -531,6 +597,245 @@ Verify that LLM tool routing, multilingual Tanglish/Hindi processing, and Supaba
 ```bash
 cd backend
 python test_agent.py
+```
+
+---
+
+## 📱 Mobile App Team API Integration Guide
+
+This guide is for the mobile app team (Flutter, React Native, iOS, Android) to connect the RAGUL Chatbot with:
+1. **Voice Input (STT $\rightarrow$ LLM)**: User records audio on their phone $\rightarrow$ sends to backend $\rightarrow$ transcribed to text $\rightarrow$ LLM answers.
+2. **Text Input (Text $\rightarrow$ LLM)**: User types a text query on their phone $\rightarrow$ sends to backend $\rightarrow$ LLM answers.
+3. **Dual Output (Text + Voice TTS)**: Every response contains both **full text** to show in chat and a **playable audio link / base64 voice** to speak aloud!
+
+---
+
+### Pipeline Overview
+
+```
+                      ┌──────────────────────────────────────┐
+                      │          MOBILE APPLICATION          │
+                      │  - Microphone (Voice Recording)      │
+                      │  - Text Input Box                    │
+                      │  - Audio Player / Media Streamer     │
+                      └───────────────┬──────────────────────┘
+                                      │
+              ┌───────────────────────┴───────────────────────┐
+              │                                               │
+      [1] Audio File (.m4a/.wav)                      [2] JSON Text Message
+              │                                               │
+              ▼                                               ▼
+     POST /api/chat/audio                              POST /api/chat
+              │                                               │
+              ▼                                               │
+      Multilingual STT                                        │
+     (faster-whisper)                                         │
+              │                                               │
+              └───────────────────────┬───────────────────────┘
+                                      │ Transcribed / Typed Text
+                                      ▼
+                        ┌───────────────────────────┐
+                        │   LLM & KNOWLEDGE ROUTER  │
+                        │ - NASEM 2021 Formulation  │
+                        │ - Veterinary RAG Search   │
+                        │ - PashuX Vision Alerts    │
+                        └─────────────┬─────────────┘
+                                      │
+                                      ▼
+                         Synthesized Neural TTS (gTTS)
+                                      │
+                                      ▼
+                      ┌───────────────────────────────┐
+                      │       MOBILE APP RESPONSE     │
+                      │ - transcript / user_text      │
+                      │ - response (Full Text)        │
+                      │ - audio_url (Stream Link)     │
+                      │ - audio_base64 (Inline Audio) │
+                      │ - proof_images / tool_meta    │
+                      └───────────────────────────────┘
+```
+
+---
+
+### 1. Voice Input API: `POST /api/chat/audio`
+
+Send an audio file directly from the phone's microphone. The backend will transcribe it to text, send it to the LLM, and return both text and speech audio.
+
+- **URL**: `http://<SERVER_IP>:8000/api/chat/audio` (or `/api/chat/voice`)
+- **Method**: `POST`
+- **Content-Type**: `multipart/form-data`
+- **Supported Audio Formats**: `.m4a`, `.wav`, `.mp3`, `.aac`, `.ogg`, `.webm`
+
+#### Form Parameters:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | Binary File | **Yes** | The recorded audio file from the device microphone |
+| `session_id` | String | No | Session UUID for conversation history memory (persists chat context) |
+| `language` | String | No | Target language code: `"tanglish"`, `"en"`, `"ta"`, or `"hi"` |
+| `farm_id` | String | No | Optional farm UUID scoping database queries |
+| `return_audio_base64` | Boolean | No | Pass `true` if you want inline base64 MP3 audio in the response |
+
+#### Response JSON:
+```json
+{
+  "status": "success",
+  "session_id": "0b4c2b92-7ef6-4df1-863a-23910c283d5a",
+  "transcript": "Check cow C101 estrus alert and feed requirement",
+  "response": "Cow C101 was detected with mounting behavior yesterday at 14:32 with 94% confidence. According to NASEM 2021 guidelines, her dry matter intake is 18.2 kg/day.",
+  "audio_url": "http://192.168.1.100:8000/api/tts?text=Cow+C101+was+detected...&language=en",
+  "audio_base64": null,
+  "detected_language": "en",
+  "stt_confidence": 0.95,
+  "duration": 2.4,
+  "tool_meta": { "executed": true, "tool": "get_estrus_and_heat_alerts" },
+  "proof_images": [
+    { "cctv_id": "CAM_SHED_01", "url": "/api/media/image?path=cam1_proof.jpg" }
+  ]
+}
+```
+
+---
+
+### 2. Text Input API: `POST /api/chat`
+
+Send a text message query. The backend queries the LLM and returns the text answer together with a playable voice audio link.
+
+- **URL**: `http://<SERVER_IP>:8000/api/chat`
+- **Method**: `POST`
+- **Content-Type**: `application/json`
+
+#### Request Body:
+```json
+{
+  "message": "C101 ku enna feed kudukanum?",
+  "session_id": "0b4c2b92-7ef6-4df1-863a-23910c283d5a",
+  "language": "tanglish",
+  "farm_id": null,
+  "return_audio_base64": false
+}
+```
+
+#### Response JSON:
+```json
+{
+  "status": "success",
+  "session_id": "0b4c2b92-7ef6-4df1-863a-23910c283d5a",
+  "user_text": "C101 ku enna feed kudukanum?",
+  "response": "Cow C101 ku 18.2 kg Dry Matter thevai. Idhula 60% green fodder matrum 40% concentrate mix kodungalen.",
+  "audio_url": "http://192.168.1.100:8000/api/tts?text=Cow+C101+ku+18.2+kg...&language=tanglish",
+  "audio_base64": null,
+  "tool_meta": { "executed": true, "tool": "get_feed_and_nutrition" },
+  "proof_images": null,
+  "detected_language": "tanglish",
+  "stt_confidence": null
+}
+```
+
+---
+
+### 3. Direct Streaming TTS Audio Link: `GET /api/tts`
+
+Use this link directly in any mobile audio player (e.g., `audioplayers` in Flutter, `expo-av` in React Native, `AVPlayer` in iOS, or `MediaPlayer` in Android).
+
+- **URL**: `http://<SERVER_IP>:8000/api/tts?text=Hello+Farmer&language=en`
+- **Content-Type**: `audio/mpeg`
+- **Playback**: Instant streaming MP3 without downloading the entire file first.
+
+---
+
+### 4. Code Examples for App Team
+
+#### A. Flutter / Dart Example (Voice In $\rightarrow$ Text & Voice Out)
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
+
+final player = AudioPlayer();
+
+// Send recorded voice to RAGUL
+Future<void> sendVoiceNote(String audioFilePath, String sessionId) async {
+  var request = http.MultipartRequest(
+    'POST',
+    Uri.parse('http://192.168.1.100:8000/api/chat/audio'),
+  );
+
+  request.fields['session_id'] = sessionId;
+  request.fields['language'] = 'tanglish';
+  request.files.add(await http.MultipartFile.fromPath('file', audioFilePath));
+
+  var streamedResponse = await request.send();
+  var response = await http.Response.fromStream(streamedResponse);
+
+  if (response.statusCode == 200) {
+    var data = jsonDecode(response.body);
+
+    // 1. User spoken text
+    String userText = data['transcript'];
+
+    // 2. LLM response text
+    String assistantReply = data['response'];
+
+    // 3. Spoken voice audio URL
+    String audioUrl = data['audio_url'];
+
+    print("User said: $userText");
+    print("RAGUL replied: $assistantReply");
+
+    // Play the voice audio aloud immediately
+    if (audioUrl.isNotEmpty) {
+      await player.play(UrlSource(audioUrl));
+    }
+  }
+}
+```
+
+#### B. React Native / Expo Example (Text In $\rightarrow$ Text & Voice Out)
+
+```javascript
+import { Audio } from 'expo-av';
+
+async function sendTextMessage(messageText, sessionId) {
+  const response = await fetch('http://192.168.1.100:8000/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: messageText,
+      session_id: sessionId,
+      language: 'en'
+    })
+  });
+
+  const data = await response.json();
+  console.log("Text Answer:", data.response);
+
+  // Play voice response
+  if (data.audio_url) {
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: data.audio_url },
+      { shouldPlay: true }
+    );
+    await sound.playAsync();
+  }
+}
+```
+
+#### C. cURL Quick Test
+
+```bash
+# 1. Text Input -> Text & Voice Output
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is the optimal feed for pregnant cows?", "language": "en"}'
+
+# 2. Voice Input -> Text & Voice Output
+curl -X POST http://localhost:8000/api/chat/audio \
+  -F "file=@sample_recording.m4a" \
+  -F "language=tanglish"
+
+# 3. Direct Audio Test (Play speech directly)
+curl -O "http://localhost:8000/api/tts?text=Hello+Farmer&language=en"
 ```
 
 ---

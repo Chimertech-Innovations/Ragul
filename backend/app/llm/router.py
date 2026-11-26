@@ -148,14 +148,22 @@ class AgentRouter:
         user_text: str,
         history: List[Dict[str, str]],
         session_id: Optional[str] = None,
-        farm_id: Optional[str] = None
+        farm_id: Optional[str] = None,
+        detected_language: Optional[str] = None
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Coordinates full LLM cycle: phonetic correction -> first pass with tools ->
         database query execution for user's farm -> second pass synthesis -> formatted output.
         """
         user_text = self.normalize_dairy_phonetics(user_text)
-        logger.info(f"[AgentRouter] User Input: '{user_text}' | Farm: {farm_id}")
+
+        # Language Detection & Contextual Anchoring (Tanglish, Tamil, Hindi, English)
+        lang = (detected_language or "").strip().lower()
+        if not lang or lang in {"auto", "all", "multilingual", "none", "null"}:
+            from ..audio.stt import detect_language_from_text
+            lang = detect_language_from_text(user_text)
+
+        logger.info(f"[AgentRouter] User Input: '{user_text}' | Farm: {farm_id} | Language: '{lang}'")
 
         # Direct Farm ID Resolution: If no farm_id is provided, default seamlessly to the configured farm
         if not farm_id or not str(farm_id).strip() or str(farm_id).strip().lower() in {"none", "null", "undefined", "unauthenticated"}:
@@ -278,7 +286,7 @@ class AgentRouter:
                 }
 
         # Autonomous AI Agent Reasoning & Dynamic Tool Dispatching
-        messages = build_agent_messages(history, user_text)
+        messages = build_agent_messages(history, user_text, language=lang)
 
         # 1. Open-Ended Autonomous LLM Chat with Tools
         assistant_msg, tool_calls = await llm_client.chat(
@@ -365,9 +373,30 @@ class AgentRouter:
                 yesterday_str = (now_ist - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
                 curr_time_str = now_ist.strftime("%A, %d %B %Y, %I:%M %p IST")
 
+                lang_inst = "11. LANGUAGE REQUIREMENT: Respond in clear, helpful English."
+                if lang == "tanglish":
+                    lang_inst = (
+                        "11. LANGUAGE REQUIREMENT (CRITICAL - DO NOT TRANSLATE TO ENGLISH):\n"
+                        "The user asked in TANGLISH (Tamil words in English script).\n"
+                        "You MUST formulate your response in natural, friendly TANGLISH using English letters (e.g. 'Cow C101-ku inaiku 5 kg green fodder kudunga, milk yield 12 litres irukku, heat alert illa').\n"
+                        "NEVER output pure English prose!"
+                    )
+                elif lang in {"ta", "tamil"}:
+                    lang_inst = (
+                        "11. LANGUAGE REQUIREMENT (CRITICAL - DO NOT TRANSLATE TO ENGLISH):\n"
+                        "The user asked in TAMIL. You MUST formulate your response entirely in Tamil script (தமிழ்).\n"
+                        "NEVER output pure English prose!"
+                    )
+                elif lang in {"hi", "hindi", "hinglish"}:
+                    lang_inst = (
+                        "11. LANGUAGE REQUIREMENT (CRITICAL - DO NOT TRANSLATE TO ENGLISH):\n"
+                        "The user asked in HINDI/HINGLISH. You MUST formulate your response in Hindi/Hinglish.\n"
+                        "NEVER output pure English prose!"
+                    )
+
                 synthesis_prompt = (
                     f"Current Real-Time: {curr_time_str}. Today is {today_str}, yesterday was {yesterday_str}.\n"
-                    f"User asked: '{user_text}'\n\n"
+                    f"User asked: '{user_text}' (Detected Language: {lang})\n\n"
                     f"Retrieved Farm Vision & Telemetry Data for '{tool_name}':\n"
                     f"{json.dumps(tool_result, default=str, ensure_ascii=False)}\n\n"
                     "FORMATTING & ACCURACY REQUIREMENTS:\n"
@@ -381,7 +410,8 @@ class AgentRouter:
                     "7. ESTRUS CONFIDENCE THRESHOLD: Only report estrus detections with >85% confidence.\n"
                     f"8. {'Mention that CCTV capture proof images are displayed below in your chat gallery.' if proof_images else ''}\n"
                     "9. GROUND TRUTH: ONLY report what exists in the retrieved database data. Never invent or hallucinate data.\n"
-                    "10. CHIMERTECH PRODUCT INTEGRATION: If the question is about estrus, mounting, breeding, or artificial insemination, mention that Chimertech has the **Chimertech Visual AI Insemination Gun with HD Camera** (to inspect the cervix and perform precise insemination) and **Chimertech Estrus Detection Kit** available on **chimertech.shop**. If about mastitis, mention **Chimertech Quadmastest** and **CMT Kit**."
+                    "10. CHIMERTECH PRODUCT INTEGRATION: If the question is about estrus, mounting, breeding, or artificial insemination, mention that Chimertech has the **Chimertech Visual AI Insemination Gun with HD Camera** (to inspect the cervix and perform precise insemination) and **Chimertech Estrus Detection Kit** available on **chimertech.shop**. If about mastitis, mention **Chimertech Quadmastest** and **CMT Kit**.\n"
+                    f"{lang_inst}"
                 )
                 synthesis_messages.append({"role": "user", "content": synthesis_prompt})
 
@@ -484,10 +514,25 @@ class AgentRouter:
         is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_text)
         is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_text)
         lower_u = user_text.lower().strip()
+        is_tanglish = any(w in lower_u for w in ["vanakkam", "epdi", "eppadi", "irukinga", "sollunga", "enna", "paal", "maadu", "kudunga", "pannunga", "nalla", "inaiku", "inniku"])
         is_intro_query = any(phrase in lower_u for phrase in [
             "who are you", "what is your name", "what can you do", "introduce yourself", 
-            "tell me about yourself", "help me", "யார் நீ", "உன்னால் என்ன செய்ய முடியும்", "तुम कौन हो"
+            "tell me about yourself", "help me", "யார் நீ", "உன்னால் என்ன செய்ய முடியும்", "तुम कौन हो", "yar neenga", "neenga yar"
         ])
+
+        if is_tanglish:
+            if not is_intro_query:
+                return "Vanakkam! Naan **RAGUL**. Inaiku unga farm or cows pathi enna status check pannanum?"
+            return (
+                "Vanakkam! Naan **RAGUL**, ungal PashuX AI Dairy Farm Supervisor.\n\n"
+                "Inaiku ungaluku eppadi help pannanum?\n"
+                "• 🔍 Cow status paaka (e.g. **COW001**, **COW002**)\n"
+                "• 🔥 Estrus / Heat alerts & AI timing check panna\n"
+                "• 📸 Live CCTV camera proof photos paaka\n"
+                "• 🌾 Manger feed & fodder logs check panna\n"
+                "• 🩺 Mastitis testing & veterinary advice\n\n"
+                "Enna check pannanum sollunga?"
+            )
 
         if is_tamil:
             if not is_intro_query:

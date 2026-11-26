@@ -177,6 +177,11 @@ export class AudioController {
         this.recognition.lang = 'en-IN';
 
         this.recognition.onresult = (event: any) => {
+          // When backend WebSocket is active, let backend Groq Whisper handle multilingual speech with exact fidelity
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            return;
+          }
+
           const lastResultIndex = event.results.length - 1;
           const rawTranscript = event.results[lastResultIndex][0].transcript.trim();
           if (!rawTranscript) return;
@@ -419,17 +424,15 @@ export class AudioController {
               }
             }
           } else if (data.type === 'user_transcript') {
-            // STRICT SINGLE SOURCE OF TRUTH: Only use backend WS transcript if browser SpeechRecognition is not supported
-            if (!this.recognition) {
-              const text = (data.text || '').trim();
-              const now = Date.now();
-              if (text && (text.toLowerCase() !== this.lastSentTranscript.toLowerCase() || now - this.lastTranscriptTime > 2500)) {
-                this.lastSentTranscript = text;
-                this.lastTranscriptTime = now;
-                console.log('[AudioController] High-Confidence Backend Speech:', text);
-                if (this.onTranscriptCallback) {
-                  this.onTranscriptCallback(text, data.language || 'en');
-                }
+            // High-precision backend Groq Whisper transcript (supports Tamil, Tanglish, Hindi, English)
+            const text = (data.text || '').trim();
+            const now = Date.now();
+            if (text && (text.toLowerCase() !== this.lastSentTranscript.toLowerCase() || now - this.lastTranscriptTime > 2500)) {
+              this.lastSentTranscript = text;
+              this.lastTranscriptTime = now;
+              console.log('[AudioController] High-Confidence Backend Groq Speech:', text, 'lang:', data.language);
+              if (this.onTranscriptCallback) {
+                this.onTranscriptCallback(text, data.language || 'auto');
               }
             }
           }

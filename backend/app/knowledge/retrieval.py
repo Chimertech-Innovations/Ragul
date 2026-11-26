@@ -38,12 +38,10 @@ DOMAIN_EXPANSIONS = {
         "BCS scale",
     ],
     r"\bmooposhaq\b": [
-        "precision nutrition",
-        "ration formulation",
-        "dry matter intake",
-        "free water intake",
-        "heat stress",
-        "least-cost ration",
+        "supplementary feed",
+        "energy protein supplement",
+        "low body condition ration",
+        "cattle nutrition recovery",
     ],
     r"\bmastitis\b": [
         "udder inflammation",
