@@ -1873,6 +1873,12 @@ async def get_warehouse_inventory(
             if "farm_id" in cols and f_id:
                 params.append(str(f_id))
                 sql += f" WHERE farm_id::text = ${len(params)}"
+            if item_query and str(item_query).strip():
+                name_col = "item_name" if "item_name" in cols else ("name" if "name" in cols else None)
+                if name_col:
+                    params.append(f"%{str(item_query).strip()}%")
+                    connector = " AND " if params[:-1] else " WHERE "
+                    sql += f"{connector}{name_col} ILIKE ${len(params)}"
             sql += " LIMIT 50;"
             rows = await supabase_db.fetch_all(sql, *params)
             return {
@@ -1890,6 +1896,262 @@ async def get_warehouse_inventory(
         "total_items": 0,
         "inventory": [],
     }
+
+
+# ----------------- SH-09: ATOMIC INVENTORY DEDUCTION ON LOW BCS ----------------- #
+
+
+async def deduct_mooposhaq_for_low_bcs(
+    cattle_id: str,
+    bcs_score: Optional[float] = None,
+    deduction_kg: float = 2.0,
+    farm_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    SH-09 (Auto-Inventory Deduction):
+    Resolves a cow's latest BCS (or uses the provided bcs_score). Whenever BCS < 3.0,
+    atomically deducts MooPoshaq stock from public.inventory_items using FOR UPDATE
+    locking and returns a restock_alert flag when quantity <= low_stock_level.
+    """
+    if deduction_kg <= 0:
+        raise ValueError(f"deduction_kg must be greater than 0 (got {deduction_kg})")
+
+    f_id_str = await _resolve_farm_id(farm_id)
+    try:
+        f_id = int(f_id_str)
+    except (TypeError, ValueError):
+        f_id = 1
+
+    cands = _normalize_erp_cow_id(cattle_id)
+    digits = re.findall(r"\d+", str(cattle_id or ""))
+    tag_num = int(digits[0]) if digits else None
+
+    cow_row = await supabase_db.fetch_one(
+        """
+        SELECT id, farm_id, cattle_tag_no, name
+        FROM public.cattles
+        WHERE farm_id = $1
+          AND (
+              ($2::bigint IS NOT NULL AND (cattle_tag_no = $2::bigint OR id = $2::bigint))
+              OR UPPER(COALESCE(name, '')) = ANY($3::text[])
+          )
+        LIMIT 1
+        """,
+        f_id,
+        tag_num,
+        cands or [""],
+    )
+
+    if not cow_row:
+        return {
+            "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+            "found": False,
+            "triggered": False,
+            "farm_id": f_id,
+            "cattle_id": cattle_id,
+            "message": f"Cattle {cattle_id} not found for farm {f_id}.",
+        }
+
+    internal_cattle_id = int(cow_row["id"])
+    display_tag = cow_row.get("cattle_tag_no") or internal_cattle_id
+    cow_name = cow_row.get("name") or f"Cattle {display_tag}"
+
+    resolved_bcs = float(bcs_score) if bcs_score is not None else None
+    existing_test_id: Optional[int] = None
+
+    latest_test = await supabase_db.fetch_one(
+        """
+        SELECT id AS test_id, bcs_score
+        FROM public.bcs_tests
+        WHERE cattle_id = $1 AND bcs_score IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        internal_cattle_id,
+    )
+    if latest_test:
+        existing_test_id = int(latest_test["test_id"])
+        if resolved_bcs is None:
+            resolved_bcs = float(latest_test["bcs_score"])
+
+    if resolved_bcs is None:
+        latest_ana = await supabase_db.fetch_one(
+            """
+            SELECT bcs_score
+            FROM public.pashux_cattle_analytics
+            WHERE cattle_id = $1 AND bcs_score IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            internal_cattle_id,
+        )
+        if latest_ana:
+            resolved_bcs = float(latest_ana["bcs_score"])
+
+    inv_rows = await supabase_db.fetch_all(
+        """
+        SELECT farm_id, item_name, category, quantity, unit, low_stock_level
+        FROM public.inventory_items
+        WHERE farm_id = $1
+        ORDER BY id ASC
+        """,
+        f_id,
+    )
+    inventory_snapshot = [dict(r) for r in inv_rows]
+
+    if resolved_bcs is None:
+        return {
+            "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+            "found": True,
+            "triggered": False,
+            "farm_id": f_id,
+            "cattle_id": display_tag,
+            "cow_name": cow_name,
+            "bcs_score": None,
+            "inventory": inventory_snapshot,
+            "message": f"No BCS score recorded yet for {cow_name} (#{display_tag}).",
+        }
+
+    if resolved_bcs >= 3.0:
+        return {
+            "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+            "found": True,
+            "triggered": False,
+            "farm_id": f_id,
+            "cattle_id": display_tag,
+            "cow_name": cow_name,
+            "bcs_score": round(resolved_bcs, 2),
+            "inventory": inventory_snapshot,
+            "message": f"{cow_name} (#{display_tag}) has BCS {resolved_bcs:.2f} (>= 3.0); no MooPoshaq deduction triggered.",
+        }
+
+    pool = await supabase_db.get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            item = await conn.fetchrow(
+                """
+                SELECT id, farm_id, item_name, quantity, unit, low_stock_level
+                FROM public.inventory_items
+                WHERE farm_id = $1
+                  AND item_name ILIKE '%MooPoshaq%'
+                ORDER BY id ASC
+                LIMIT 1
+                FOR UPDATE
+                """,
+                f_id,
+            )
+
+            if not item:
+                return {
+                    "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+                    "found": True,
+                    "triggered": True,
+                    "deducted": False,
+                    "restock_alert": True,
+                    "status": "item_not_found",
+                    "farm_id": f_id,
+                    "cattle_id": display_tag,
+                    "cow_name": cow_name,
+                    "bcs_score": round(resolved_bcs, 2),
+                    "inventory": inventory_snapshot,
+                    "message": "MooPoshaq not found in warehouse inventory. Please add MooPoshaq stock to support BCS recovery.",
+                }
+
+            prev_qty = float(item["quantity"])
+            low_stock_level = float(item["low_stock_level"] or 0.0)
+            req_qty = float(deduction_kg)
+
+            if prev_qty < req_qty:
+                return {
+                    "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+                    "found": True,
+                    "triggered": True,
+                    "deducted": False,
+                    "restock_alert": True,
+                    "status": "insufficient_stock",
+                    "farm_id": f_id,
+                    "cattle_id": display_tag,
+                    "cow_name": cow_name,
+                    "bcs_score": round(resolved_bcs, 2),
+                    "item_name": item["item_name"],
+                    "available_qty": prev_qty,
+                    "required_qty": req_qty,
+                    "unit": item["unit"],
+                    "low_stock_level": low_stock_level,
+                    "inventory": inventory_snapshot,
+                    "message": (
+                        f"Insufficient {item['item_name']} stock "
+                        f"({prev_qty} {item['unit']} available, {req_qty} {item['unit']} required). "
+                        f"Restock inventory immediately."
+                    ),
+                }
+
+            test_id = existing_test_id
+            if test_id is None:
+                test_id = await conn.fetchval(
+                    """
+                    INSERT INTO public.bcs_tests (cattle_id, input_type, bcs_score, condition_status, body_condition_status)
+                    VALUES ($1, 'ai_analytics', $2, 'thin', 'Low BCS')
+                    RETURNING id
+                    """,
+                    internal_cattle_id,
+                    resolved_bcs,
+                )
+
+            rec_id = await conn.fetchval(
+                """
+                INSERT INTO public.bcs_recommendations (test_id, title, description)
+                VALUES ($1, $2, $3)
+                RETURNING id
+                """,
+                test_id,
+                f"Low BCS ({resolved_bcs:.2f}) Supplementary Ration — MooPoshaq",
+                f"Auto-deducted {req_qty} {item['unit']} of {item['item_name']} for {cow_name} (#{display_tag}) with BCS {resolved_bcs:.2f}.",
+            )
+
+            updated = await conn.fetchrow(
+                """
+                UPDATE public.inventory_items
+                SET quantity = quantity - $1,
+                    last_updated = NOW()
+                WHERE farm_id = $2
+                  AND item_name ILIKE '%MooPoshaq%'
+                RETURNING farm_id, item_name, quantity, unit, low_stock_level, last_updated
+                """,
+                req_qty,
+                f_id,
+            )
+
+            new_qty = float(updated["quantity"])
+            restock_alert = new_qty <= low_stock_level
+
+            return {
+                "source": "Supabase PostgreSQL (SH-09 Auto-Inventory Deduction)",
+                "found": True,
+                "triggered": True,
+                "deducted": True,
+                "restock_alert": restock_alert,
+                "status": "deducted",
+                "recommendation_id": int(rec_id),
+                "test_id": int(test_id),
+                "farm_id": int(updated["farm_id"]),
+                "cattle_id": display_tag,
+                "cow_name": cow_name,
+                "bcs_score": round(resolved_bcs, 2),
+                "item_name": updated["item_name"],
+                "previous_qty": prev_qty,
+                "deducted_qty": req_qty,
+                "remaining_qty": new_qty,
+                "unit": updated["unit"],
+                "low_stock_level": low_stock_level,
+                "last_updated": updated["last_updated"].isoformat() if updated["last_updated"] else None,
+                "inventory": inventory_snapshot,
+                "message": (
+                    f"Deducted {req_qty} {updated['unit']} of {updated['item_name']} "
+                    f"({prev_qty} -> {new_qty} {updated['unit']}) for {cow_name} (#{display_tag}, BCS {resolved_bcs:.2f})."
+                    + (" RESTOCK ALERT: Stock is at or below low_stock_level." if restock_alert else "")
+                ),
+            }
 
 
 # ----------------- SH-10: NZ/AUS COMPLIANCE AUDIT ----------------- #
@@ -2453,6 +2715,20 @@ FARM_TOOLS = {
                 "item_query": {"type": "string", "description": "Optional feed or supply item name"},
                 "farm_id": {"type": "string", "description": "Farm ID (optional)"},
             },
+        },
+    },
+    "deduct_mooposhaq_for_low_bcs": {
+        "function": deduct_mooposhaq_for_low_bcs,
+        "description": "SH-09 Auto-Inventory Deduction: Whenever a cow has BCS < 3.0, atomically records a low-BCS recommendation and deducts MooPoshaq stock from public.inventory_items, returning a restock_alert flag if quantity <= low_stock_level.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "cattle_id": {"type": "string", "description": "Cattle tag number or ID (e.g. '1004')"},
+                "bcs_score": {"type": "number", "description": "Optional explicit BCS score; resolved from DB if omitted"},
+                "deduction_kg": {"type": "number", "description": "Kg of MooPoshaq to deduct (default 2.0)"},
+                "farm_id": {"type": "string", "description": "Farm ID (optional)"},
+            },
+            "required": ["cattle_id"],
         },
     },
     "get_compliance_audit_report": {

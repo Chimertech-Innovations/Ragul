@@ -34,6 +34,31 @@ def _is_inventory_query(lower_text: str) -> bool:
     return any(kw in lower_text for kw in INVENTORY_KEYWORDS)
 
 
+def _is_sh09_low_bcs_deduction_query(lower_text: str) -> bool:
+    """Returns True when the user asks about low BCS / thin cow ration with MooPoshaq or inventory deduction."""
+    has_bcs = bool(re.search(r"\b(bcs|body\s+condition|thin|underweight|low\s+condition)\b", lower_text))
+    has_feed_or_deduct = bool(
+        re.search(r"\b(mooposhaq|deduct|inventory|stock|feed|ration|increase|improve|recommend|restock)\b", lower_text)
+    )
+    return has_bcs and has_feed_or_deduct
+
+
+def _extract_cow_id(text: str) -> Optional[str]:
+    """Extracts a cattle tag/ID such as '1004', 'COW001', or 'COW1004' from user text."""
+    cow_match = re.search(r"\b(?:cow|cattle)?\s*#?\s*(\d{3,6}|COW\d+)\b", text, flags=re.IGNORECASE)
+    if cow_match:
+        return cow_match.group(1)
+    return None
+
+
+def _extract_deduction_kg(lower_text: str, default_kg: float = 2.0) -> float:
+    """Extracts an explicit kg quantity (e.g. '2.5 kg') or returns default_kg."""
+    kg_match = re.search(r"(\d+(?:\.\d+)?)\s*kg\b", lower_text)
+    if kg_match:
+        return float(kg_match.group(1))
+    return default_kg
+
+
 class AgentRouter:
     def normalize_dairy_phonetics(self, text: str) -> str:
         """Corrects acoustic STT speech misrecognitions to canonical dairy farming terms."""
@@ -164,6 +189,26 @@ class AgentRouter:
             logger.info("[SecurityGuard] Enforcing multi-tenant isolation and user data privacy.")
             security_resp = await self._generate_security_privacy_response(user_text, farm_id)
             return security_resp, {"executed": True, "tool": "farm_security_and_privacy"}
+
+        # SH-09 FAST-PATH FOR LOW-BCS MOOPOSHAQ RECOMMENDATION & ATOMIC INVENTORY DEDUCTION
+        if _is_sh09_low_bcs_deduction_query(lower_u):
+            cow_id = _extract_cow_id(user_text)
+            deduct_spec = FARM_TOOLS.get("deduct_mooposhaq_for_low_bcs")
+            if cow_id and deduct_spec:
+                deduct_kg = _extract_deduction_kg(lower_u, default_kg=2.0)
+                logger.info(f"[SH-09] Triggering deduct_mooposhaq_for_low_bcs for cow={cow_id}, kg={deduct_kg}")
+                tool_result = await deduct_spec["function"](
+                    cattle_id=cow_id,
+                    deduction_kg=deduct_kg,
+                    farm_id=farm_id,
+                )
+                direct_summary = self._fallback_tool_summary("deduct_mooposhaq_for_low_bcs", tool_result, user_text)
+                return direct_summary, {
+                    "executed": True,
+                    "tool": "deduct_mooposhaq_for_low_bcs",
+                    "arguments": {"cattle_id": cow_id, "deduction_kg": deduct_kg, "farm_id": farm_id},
+                    "result": tool_result,
+                }
 
         # FAST-PATH FOR FARM STATUS / OVERVIEW QUERIES (<50ms INSTANT GROUND-TRUTH RESPONSE)
         status_triggers = [
@@ -392,7 +437,7 @@ class AgentRouter:
             "app", "fever", "symptom", "symptoms", "sysmptom", "sysmptoms", "gir",
             "litre", "litres", "liter", "liters", "increase", "boost", "how", "why",
             "warehouse", "stock", "stok", "inventory", "bacha", "godown",
-            "compliance", "audit", "welfare", "breeding", "calving", "calve",
+            "compliance", "audit", "welfare", "breeding", "calving", "calve", "bcs", "mooposhaq",
             "நோய்", "பால்", "மாடு", "மாடுகள்", "பயனர்", "பயனர்கள்", "காய்ச்சல்", "அறிகுறி", "உற்பத்தி"
         }
         words = cleaned.split()
@@ -538,6 +583,31 @@ class AgentRouter:
         lower_q = user_query.lower()
         is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_query)
         is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_query)
+
+        if tool_name == "deduct_mooposhaq_for_low_bcs":
+            cow_label = f"{data.get('cow_name', 'Cattle')} (#{data.get('cattle_id', '')})"
+            bcs_val = data.get("bcs_score")
+            bcs_str = f"{bcs_val:.2f}" if isinstance(bcs_val, (int, float)) else str(bcs_val)
+            if not data.get("triggered"):
+                return f"Sir, **{cow_label}** has **BCS {bcs_str}**; no **MooPoshaq** deduction was triggered."
+            if data.get("deducted"):
+                alert_line = (
+                    f"\n• 🚨 **Restock Alert:** **True** — stock (**{data.get('remaining_qty')} {data.get('unit', 'kg')}**) is at or below **low_stock_level** (**{data.get('low_stock_level')} {data.get('unit', 'kg')}**)."
+                    if data.get("restock_alert")
+                    else f"\n• **Restock Alert:** **False** (remaining above **low_stock_level** of **{data.get('low_stock_level')} {data.get('unit', 'kg')}**)."
+                )
+                return (
+                    f"Sir, low **BCS ({bcs_str})** detected for **{cow_label}**. **MooPoshaq** inventory has been atomically updated:\n\n"
+                    f"• **Item:** **{data.get('item_name', 'MooPoshaq')}**\n"
+                    f"• **Deducted:** **{data.get('deducted_qty')} {data.get('unit', 'kg')}** (**{data.get('previous_qty')}** -> **{data.get('remaining_qty')} {data.get('unit', 'kg')}**)"
+                    f"{alert_line}"
+                )
+            return (
+                f"Sir, low **BCS ({bcs_str})** detected for **{cow_label}**, but **MooPoshaq** could not be deducted:\n\n"
+                f"• **Status:** **{data.get('status', 'unavailable')}**\n"
+                f"• **Restock Alert:** **{data.get('restock_alert', True)}**\n"
+                f"• **Action Needed:** {data.get('message', 'Update warehouse inventory_items with MooPoshaq stock.')}"
+            )
 
         if tool_name == "get_compliance_audit_report":
             return data.get("summary") or "Compliance audit completed."
@@ -918,7 +988,7 @@ class AgentRouter:
                             "  - **Drives Daytime Milk Synthesis:** High-fiber morning roughage kickstarts active ruminal digestion, fueling peak daytime milk synthesis.\n"
                             "  - **Prevents Heat Inappetence:** Feeding in the cooler dawn hours ensures eager intake before rising midday ambient temperatures suppress appetite.\n\n"
                             "🌾 **Optimal Evening Feeding Time:**\n"
-                            "• **Best Time Window:** **05:00 PM – 07:00 PM** (within 15–30 minutes after evening milking)\n"
+                            "• **Best Time Window:** **05:00 PM – 07:30 PM** (within 15–30 minutes after evening milking)\n"
                             "• **Manger Allocation:** Evening concentrate ration + 60–70% of daily green fodder, dry roughage, or TMR silage\n"
                             "• **CCTV Verification:** Confirmed active on **CAM01** with peak manger eating recorded at **06:42 PM**.\n"
                             "• **Scientific Reasons (Why Evening Feeding Matters):**\n"
@@ -1268,6 +1338,24 @@ class AgentRouter:
         if self._is_greeting_or_introduction(user_text):
             return self._generate_greeting_response(user_text), {"executed": False, "tool": None}
 
+        # SH-09 fallback handling
+        if _is_sh09_low_bcs_deduction_query(lower_u):
+            cow_id = _extract_cow_id(user_text)
+            deduct_spec = FARM_TOOLS.get("deduct_mooposhaq_for_low_bcs")
+            if cow_id and deduct_spec:
+                deduct_kg = _extract_deduction_kg(lower_u, default_kg=2.0)
+                tool_result = await deduct_spec["function"](
+                    cattle_id=cow_id,
+                    deduction_kg=deduct_kg,
+                    farm_id=farm_id,
+                )
+                summary = self._fallback_tool_summary("deduct_mooposhaq_for_low_bcs", tool_result, user_text)
+                return summary, {
+                    "executed": True,
+                    "tool": "deduct_mooposhaq_for_low_bcs",
+                    "result": tool_result,
+                }
+
         # Extract target cow if mentioned
         cow_match = re.search(r'\b(cow\s*\d+|cow\d+|cattle\s*#?\d+)\b', lower_u)
         target_cow = None
@@ -1482,5 +1570,6 @@ class AgentRouter:
                 "• 🩺 **Veterinary Care:** Mastitis screening & treatment steps"
             )
         return resp, {"executed": False, "tool": None}
+
 
 tool_router = AgentRouter()

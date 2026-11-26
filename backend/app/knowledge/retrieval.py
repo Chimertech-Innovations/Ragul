@@ -1,4 +1,3 @@
-
 import json
 import re
 import chromadb
@@ -24,6 +23,49 @@ CHUNKS_FILE = PROJECT_ROOT / "data" / "chunks.jsonl"
 
 RRF_K = 60
 CANDIDATE_K = 20
+
+DOMAIN_EXPANSIONS = {
+    r"\bbcs\b": [
+        "body condition score",
+        "body condition scoring",
+        "body condition assessment",
+        "condition score in dairy cattle",
+        "cow body condition",
+        "body reserves",
+        "fat cover",
+        "tailhead",
+        "loin",
+        "BCS scale",
+    ],
+    r"\bmooposhaq\b": [
+        "precision nutrition",
+        "ration formulation",
+        "dry matter intake",
+        "free water intake",
+        "heat stress",
+        "least-cost ration",
+    ],
+    r"\bmastitis\b": [
+        "udder inflammation",
+        "somatic cell count",
+        "CMT",
+        "California Mastitis Test",
+        "quadmastest",
+        "teat canal infection",
+    ],
+    r"\b(estrus|heat)\b": [
+        "standing heat",
+        "mounting behavior",
+        "artificial insemination window",
+        "reproductive cycle",
+    ],
+    r"\b(dairynz|compliance|welfare)\b": [
+        "animal welfare code",
+        "body condition standard",
+        "milking cow welfare",
+        "remedial feeding",
+    ],
+}
 
 
 # ==========================================
@@ -116,9 +158,7 @@ STOP_WORDS = {
 
 
 def tokenize(text):
-
-    words = re.findall(r"\b\w+\b", text.lower())
-
+    words = re.findall(r"\b\w+\b", (text or "").lower())
     return [
         word for word in words
         if word not in STOP_WORDS
@@ -131,32 +171,20 @@ def tokenize(text):
 
 def expand_query(question, verbose=False):
     """
-    Expand recognised cattle-health abbreviations
-    into their full forms and related terminology.
-
-    The original question is retained for reranking.
-
-    Expansion is used only for dense and BM25 retrieval.
+    Expand recognised cattle-health, nutrition, and compliance terms
+    into related terminology for dense and BM25 retrieval while keeping
+    the original question intact for cross-encoder reranking.
     """
-
     expanded_terms = []
+    seen = set()
 
-    # BCS expansion
-
-    if re.search(r"\bbcs\b", question, flags=re.IGNORECASE):
-
-        expanded_terms.extend([
-            "body condition score",
-            "body condition scoring",
-            "body condition assessment",
-            "condition score in dairy cattle",
-            "cow body condition",
-            "body reserves",
-            "fat cover",
-            "tailhead",
-            "loin",
-            "BCS scale"
-        ])
+    for pattern, terms in DOMAIN_EXPANSIONS.items():
+        if re.search(pattern, question, flags=re.IGNORECASE):
+            for term in terms:
+                key = term.lower()
+                if key not in seen:
+                    seen.add(key)
+                    expanded_terms.append(term)
 
     if not expanded_terms:
         return question
@@ -164,18 +192,9 @@ def expand_query(question, verbose=False):
     expanded_query = question + " " + " ".join(expanded_terms)
 
     if verbose:
-
         print("\nQuery expansion applied:", flush=True)
-
-        print(
-            f"Original query: {question}",
-            flush=True
-        )
-
-        print(
-            f"Expanded query: {expanded_query}",
-            flush=True
-        )
+        print(f"Original query: {question}", flush=True)
+        print(f"Expanded query: {expanded_query}", flush=True)
 
     return expanded_query
 
@@ -187,7 +206,7 @@ def expand_query(question, verbose=False):
 print("Building BM25 index...", flush=True)
 
 tokenized_corpus = [
-    tokenize(item["text"])
+    tokenize(item.get("text", ""))
     for item in chunks
 ]
 
@@ -206,7 +225,6 @@ print(
 # ==========================================
 
 def vector_search(query, top_k=20):
-
     collection_count = collection.count()
 
     if collection_count == 0:
@@ -228,12 +246,11 @@ def vector_search(query, top_k=20):
         return retrieved_chunks
 
     for i in range(len(results["documents"][0])):
-
         retrieved_chunks.append({
             "id": results["ids"][0][i],
             "text": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i],
-            "distance": results["distances"][0][i]
+            "metadata": (results["metadatas"][0][i] if results.get("metadatas") and results["metadatas"][0] else {}) or {},
+            "distance": results["distances"][0][i] if results.get("distances") and results["distances"][0] else None,
         })
 
     return retrieved_chunks
@@ -244,7 +261,6 @@ def vector_search(query, top_k=20):
 # ==========================================
 
 def bm25_search(query, top_k=20):
-
     tokenized_query = tokenize(query)
 
     if not tokenized_query:
@@ -261,17 +277,17 @@ def bm25_search(query, top_k=20):
     retrieved_chunks = []
 
     for index in ranked_indices:
-
         if scores[index] <= 0:
             continue
 
         item = chunks[index]
+        chunk_id = str(item.get("id") if item.get("id") is not None else index)
 
         retrieved_chunks.append({
-            "id": item["id"],
-            "text": item["text"],
-            "metadata": item["metadata"],
-            "bm25_score": float(scores[index])
+            "id": chunk_id,
+            "text": item.get("text", ""),
+            "metadata": item.get("metadata") or {},
+            "bm25_score": float(scores[index]),
         })
 
         if len(retrieved_chunks) >= top_k:
@@ -290,64 +306,41 @@ def reciprocal_rank_fusion(
     top_k=5,
     candidate_k=CANDIDATE_K
 ):
-
     fused_results = {}
 
-    # Process vector rankings
-
     for rank, result in enumerate(vector_results, start=1):
-
-        chunk_id = result["id"]
+        chunk_id = str(result["id"])
 
         if chunk_id not in fused_results:
-
             fused_results[chunk_id] = {
                 "id": chunk_id,
                 "text": result["text"],
-                "metadata": result["metadata"],
+                "metadata": result.get("metadata") or {},
                 "rrf_score": 0.0,
                 "vector_rank": None,
-                "bm25_rank": None
+                "bm25_rank": None,
             }
 
-        fused_results[chunk_id]["rrf_score"] += (
-            1 / (RRF_K + rank)
-        )
-
+        fused_results[chunk_id]["rrf_score"] += 1 / (RRF_K + rank)
         fused_results[chunk_id]["vector_rank"] = rank
-
-        fused_results[chunk_id]["distance"] = (
-            result["distance"]
-        )
-
-    # Process BM25 rankings
+        fused_results[chunk_id]["distance"] = result.get("distance")
 
     for rank, result in enumerate(bm25_results, start=1):
-
-        chunk_id = result["id"]
+        chunk_id = str(result["id"])
 
         if chunk_id not in fused_results:
-
             fused_results[chunk_id] = {
                 "id": chunk_id,
                 "text": result["text"],
-                "metadata": result["metadata"],
+                "metadata": result.get("metadata") or {},
                 "rrf_score": 0.0,
                 "vector_rank": None,
-                "bm25_rank": None
+                "bm25_rank": None,
             }
 
-        fused_results[chunk_id]["rrf_score"] += (
-            1 / (RRF_K + rank)
-        )
-
+        fused_results[chunk_id]["rrf_score"] += 1 / (RRF_K + rank)
         fused_results[chunk_id]["bm25_rank"] = rank
-
-        fused_results[chunk_id]["bm25_score"] = (
-            result["bm25_score"]
-        )
-
-    # Rank by RRF score
+        fused_results[chunk_id]["bm25_score"] = result.get("bm25_score")
 
     ranked_results = sorted(
         fused_results.values(),
@@ -355,9 +348,7 @@ def reciprocal_rank_fusion(
         reverse=True
     )
 
-    candidates = ranked_results[:candidate_k]
-
-    return candidates
+    return ranked_results[:candidate_k]
 
 
 # ==========================================
@@ -370,12 +361,8 @@ def rerank_results(
     top_k=5,
     verbose=False
 ):
-
     if verbose:
-        print(
-            "\nReranking retrieved passages...",
-            flush=True
-        )
+        print("\nReranking retrieved passages...", flush=True)
 
     if not candidates:
         return []
@@ -394,12 +381,9 @@ def rerank_results(
     reranked_results = []
 
     for candidate, score in zip(candidates, scores):
-
-        candidate = candidate.copy()
-
-        candidate["rerank_score"] = float(score)
-
-        reranked_results.append(candidate)
+        item = candidate.copy()
+        item["rerank_score"] = float(score)
+        reranked_results.append(item)
 
     reranked_results.sort(
         key=lambda item: item["rerank_score"],
@@ -414,69 +398,34 @@ def rerank_results(
 # ==========================================
 
 def print_final_rankings(results):
-
-    print(
-        "\n========== FINAL RETRIEVAL RANKINGS ==========",
-        flush=True
-    )
+    print("\n========== FINAL RETRIEVAL RANKINGS ==========", flush=True)
 
     if not results:
-
-        print(
-            "No passages were retrieved.",
-            flush=True
-        )
-
+        print("No passages were retrieved.", flush=True)
         return
 
     for index, result in enumerate(results, start=1):
-
-        metadata = result.get("metadata", {})
-
+        metadata = result.get("metadata") or {}
         text = result.get("text", "")
 
         print(f"\nRank: {index}", flush=True)
-
         print(
             f"Document: {metadata.get('filename', metadata.get('source', 'Unknown'))}",
             flush=True
         )
-
-        print(
-            f"Category: {metadata.get('category', 'Unknown')}",
-            flush=True
-        )
-
-        print(
-            f"Page: {metadata.get('page', 'Unknown')}",
-            flush=True
-        )
-
-        print(
-            f"Rerank score: {result.get('rerank_score', 'N/A')}",
-            flush=True
-        )
-
-        print(
-            f"RRF score: {result.get('rrf_score', 'N/A')}",
-            flush=True
-        )
-
+        print(f"Category: {metadata.get('category', 'Unknown')}", flush=True)
+        print(f"Page: {metadata.get('page', 'Unknown')}", flush=True)
+        print(f"Rerank score: {result.get('rerank_score', 'N/A')}", flush=True)
+        print(f"RRF score: {result.get('rrf_score', 'N/A')}", flush=True)
         print(
             f"Vector rank: {result.get('vector_rank', 'Not in vector results')}",
             flush=True
         )
-
         print(
             f"BM25 rank: {result.get('bm25_rank', 'Not in BM25 results')}",
             flush=True
         )
-
-        print(
-            f"Text preview: {text[:300]}",
-            flush=True
-        )
-
+        print(f"Text preview: {text[:300]}", flush=True)
         print("-" * 60)
 
 
@@ -493,48 +442,22 @@ def hybrid_search(
     Retrieve and rerank veterinary passages.
 
     verbose=False hides internal retrieval diagnostics.
-
     verbose=True enables debugging output.
     """
-
-    retrieval_query = expand_query(
-        question,
-        verbose=verbose
-    )
-
-    # Dense retrieval
+    retrieval_query = expand_query(question, verbose=verbose)
 
     if verbose:
-        print(
-            "\nPerforming dense retrieval...",
-            flush=True
-        )
+        print("\nPerforming dense retrieval...", flush=True)
 
-    vector_results = vector_search(
-        retrieval_query,
-        top_k=20
-    )
-
-    # Sparse retrieval
+    vector_results = vector_search(retrieval_query, top_k=20)
 
     if verbose:
-        print(
-            "\nPerforming BM25 retrieval...",
-            flush=True
-        )
+        print("\nPerforming BM25 retrieval...", flush=True)
 
-    sparse_results = bm25_search(
-        retrieval_query,
-        top_k=20
-    )
-
-    # Reciprocal Rank Fusion
+    sparse_results = bm25_search(retrieval_query, top_k=20)
 
     if verbose:
-        print(
-            "\nCombining results using RRF...",
-            flush=True
-        )
+        print("\nCombining results using RRF...", flush=True)
 
     candidates = reciprocal_rank_fusion(
         vector_results,
@@ -544,13 +467,7 @@ def hybrid_search(
     )
 
     if verbose:
-
-        print(
-            f"RRF candidate pool: {len(candidates)} chunks",
-            flush=True
-        )
-
-    # CrossEncoder reranking
+        print(f"RRF candidate pool: {len(candidates)} chunks", flush=True)
 
     final_results = rerank_results(
         question,
@@ -560,13 +477,8 @@ def hybrid_search(
     )
 
     if verbose:
-
         print_final_rankings(final_results)
-
-        print(
-            f"\nRetrieved {len(final_results)} reranked passages.",
-            flush=True
-        )
+        print(f"\nRetrieved {len(final_results)} reranked passages.", flush=True)
 
     return final_results
 
@@ -576,94 +488,29 @@ def hybrid_search(
 # ==========================================
 
 if __name__ == "__main__":
-
     print("\n" + "=" * 60)
-
-    print(
-        "       CATTLE HEALTH - HYBRID RETRIEVAL"
-    )
-
+    print("       CATTLE HEALTH - HYBRID RETRIEVAL")
     print("=" * 60)
 
-    question = input(
-        "\nEnter your cattle-health question: "
-    ).strip()
+    question = input("\nEnter your cattle-health question: ").strip()
 
     if not question:
-
         print("Please enter a valid question.")
-
     else:
-
-        final_results = hybrid_search(
-            question,
-            top_k=5,
-            verbose=True
-        )
+        final_results = hybrid_search(question, top_k=5, verbose=True)
 
         print("\n" + "=" * 60)
-
         print("FINAL RERANKED RESULTS")
-
         print("=" * 60)
 
         for index, result in enumerate(final_results, start=1):
-
             print(f"\nResult {index}")
-
-            print(
-                "Source:",
-                result["metadata"].get(
-                    "filename",
-                    "Unknown"
-                )
-            )
-
-            print(
-                "Category:",
-                result["metadata"].get(
-                    "category",
-                    "Unknown"
-                )
-            )
-
-            print(
-                "Page:",
-                result["metadata"].get(
-                    "page",
-                    "Unknown"
-                )
-            )
-
-            print(
-                "Reranking Score:",
-                round(
-                    result["rerank_score"],
-                    4
-                )
-            )
-
-            print(
-                "RRF Score:",
-                round(
-                    result["rrf_score"],
-                    6
-                )
-            )
-
-            print(
-                "Vector Rank:",
-                result["vector_rank"]
-            )
-
-            print(
-                "BM25 Rank:",
-                result["bm25_rank"]
-            )
-
-            print(
-                "Text:",
-                result["text"][:600]
-            )
-
+            print("Source:", (result.get("metadata") or {}).get("filename", "Unknown"))
+            print("Category:", (result.get("metadata") or {}).get("category", "Unknown"))
+            print("Page:", (result.get("metadata") or {}).get("page", "Unknown"))
+            print("Reranking Score:", round(result["rerank_score"], 4))
+            print("RRF Score:", round(result["rrf_score"], 6))
+            print("Vector Rank:", result.get("vector_rank"))
+            print("BM25 Rank:", result.get("bm25_rank"))
+            print("Text:", result["text"][:600])
             print("-" * 60)
