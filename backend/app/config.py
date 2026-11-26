@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Audio & STT (Groq Cloud Whisper / faster-whisper)
     STT_PROVIDER: str = "groq"
     GROQ_API_KEY: str = ""
-    GROQ_WHISPER_MODEL: str = "whisper-large-v3-turbo"
+    GROQ_WHISPER_MODEL: str = "whisper-large-v3"
     WHISPER_MODEL_SIZE: str = "base"
     WHISPER_DEVICE: str = "cpu"
     WHISPER_COMPUTE_TYPE: str = "int8"

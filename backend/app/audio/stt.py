@@ -26,19 +26,15 @@ except Exception as _av_err:
 
 logger = logging.getLogger("ragul_stt")
 
-# Comprehensive Multilingual Context Primer
-# Covers Tanglish (Romanized Tamil), Tamil script, Hinglish, Hindi script, and English Dairy terms
-MULTILINGUAL_PROMPT = (
-    # Tanglish (Romanized Tamil + English Dairy entities)
-    "Cow C101 ku feed evvalavu kudukanum, heat alert irukka, inaiku milk yield check pannunga, mastitis status enna. "
-    "Cow COW001, COW002, COW003, CAM01, milk yield, mastitis, estrus, feed ration, green fodder. "
-    # Tamil Script
-    "வணக்கம் ரகுல், பசு மாடு, பால் அளவு, சினைப் பருவம், மாட்டுத் தீவனம், மடிநோய், குவாட்மாஸ்டெஸ்ட், ஈஸ்ட்ரஸ். "
-    # Hinglish & Hindi Script
-    "नमस्ते, Cow C101 ka feed kitna dena hai, doodh kitna hai, heat alert hai kya, status bataiye. "
-    "गाय का दूध उत्पादन, दाना, हीट अलर्ट, मैस्टाइटिस, पशु स्वास्थ्य।"
+# Comprehensive Tanglish, Tamil & Multilingual Context Primer
+TANGLISH_PROMPT = (
+    "Vanakkam ragul, Cow C101 ku feed evvalavu kudukanum, heat alert irukka, inaiku milk yield check pannunga, "
+    "mastitis status enna, enakku oru problem irukku, enna problem na cow C101 ku paal koranjirukku, "
+    "cow status sollunga, Cow COW001, COW002, COW003, CAM01, milk yield, mastitis, estrus, feed ration, green fodder, "
+    "வணக்கம் மாடு பால் அளவு என்ன."
 )
-TAMIL_ENGLISH_PROMPT = MULTILINGUAL_PROMPT
+MULTILINGUAL_PROMPT = TANGLISH_PROMPT
+TAMIL_ENGLISH_PROMPT = TANGLISH_PROMPT
 
 def normalize_target_language(language: Optional[str]) -> Optional[str]:
     """
@@ -129,7 +125,7 @@ async def transcribe_groq_api(
     if not groq_api_key or not groq_api_key.strip():
         return None
 
-    model_name = getattr(settings, "GROQ_WHISPER_MODEL", "whisper-large-v3-turbo") or "whisper-large-v3-turbo"
+    model_name = getattr(settings, "GROQ_WHISPER_MODEL", "whisper-large-v3") or "whisper-large-v3"
     target_lang = normalize_target_language(language)
 
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
