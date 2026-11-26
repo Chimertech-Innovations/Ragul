@@ -13,6 +13,27 @@ from ..knowledge.rag_engine import rag_engine
 logger = logging.getLogger("ragul_agent_router")
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
+INVENTORY_KEYWORDS = (
+    "warehouse",
+    "stock",
+    "stok",
+    "inventory",
+    "bacha",
+    "baki",
+    "remaining",
+    "available stock",
+    "feed stock",
+    "godown",
+    "store room",
+    "storeroom",
+)
+
+
+def _is_inventory_query(lower_text: str) -> bool:
+    """Returns True when the user is asking about warehouse/inventory stock levels rather than manger CCTV feeding."""
+    return any(kw in lower_text for kw in INVENTORY_KEYWORDS)
+
+
 class AgentRouter:
     def normalize_dairy_phonetics(self, text: str) -> str:
         """Corrects acoustic STT speech misrecognitions to canonical dairy farming terms."""
@@ -188,7 +209,7 @@ class AgentRouter:
             req_act = None
             if any(w in lower_u for w in ["mount", "heat", "estrus", "breeding", "சினைப்பருவம்"]):
                 req_act = "estrus"
-            elif any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
+            elif not _is_inventory_query(lower_u) and any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
                 req_act = "feeding"
             elif any(w in lower_u for w in ["sick", "disease", "mastitis", "bcs", "நோய்"]):
                 req_act = "disease"
@@ -225,6 +246,25 @@ class AgentRouter:
         content = assistant_msg.get("content", "").strip() if assistant_msg else ""
         is_llm_error = not assistant_msg or not content or "cannot connect" in content.lower() or "error" in content.lower() or "failed" in content.lower() or "offline" in content.lower()
 
+        # Prevent LLM from misrouting warehouse/inventory stock queries to manger-CCTV get_feed_and_nutrition
+        if tool_calls and _is_inventory_query(lower_u):
+            filtered_calls = []
+            for tc in tool_calls:
+                fn = tc.get("function", {})
+                t_name = fn.get("name") or tc.get("name")
+                if t_name != "get_feed_and_nutrition":
+                    filtered_calls.append(tc)
+            if not filtered_calls:
+                filtered_calls = [
+                    {
+                        "function": {
+                            "name": "get_warehouse_inventory",
+                            "arguments": {"item_query": user_text, "farm_id": farm_id},
+                        }
+                    }
+                ]
+            tool_calls = filtered_calls
+
         # 2. Handle Tool Calling Execution & LLM Response Synthesis
         if tool_calls and len(tool_calls) > 0:
             first_tool_call = tool_calls[0]
@@ -249,7 +289,7 @@ class AgentRouter:
                 # Date awareness: inject target_date if user mentions today or yesterday
                 is_today_q = any(w in lower_u for w in ["today", "இன்று", "आज"])
                 is_yester_q = any(w in lower_u for w in ["yesterday", "yester", "நேற்று", "कल"])
-                if tool_name in ["get_farm_overview", "get_estrus_and_heat_alerts", "get_feed_and_nutrition", "get_cctv_proof_and_images"]:
+                if tool_name in ["get_farm_overview", "get_estrus_and_heat_alerts", "get_feed_and_nutrition", "get_cctv_proof_and_images", "get_milk_yield_records"]:
                     if is_today_q and not clean_args.get("target_date"):
                         clean_args["target_date"] = "today"
                     elif is_yester_q and not clean_args.get("target_date"):
@@ -351,6 +391,8 @@ class AgentRouter:
             "cost", "money", "spend", "plan", "build", "user", "users", "application",
             "app", "fever", "symptom", "symptoms", "sysmptom", "sysmptoms", "gir",
             "litre", "litres", "liter", "liters", "increase", "boost", "how", "why",
+            "warehouse", "stock", "stok", "inventory", "bacha", "godown",
+            "compliance", "audit", "welfare", "breeding", "calving", "calve",
             "நோய்", "பால்", "மாடு", "மாடுகள்", "பயனர்", "பயனர்கள்", "காய்ச்சல்", "அறிகுறி", "உற்பத்தி"
         }
         words = cleaned.split()
@@ -496,6 +538,59 @@ class AgentRouter:
         lower_q = user_query.lower()
         is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_query)
         is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_query)
+
+        if tool_name == "get_compliance_audit_report":
+            return data.get("summary") or "Compliance audit completed."
+
+        if tool_name == "get_warehouse_inventory":
+            inv = data.get("inventory", [])
+            if not inv:
+                return "Sir, warehouse inventory currently has **0 recorded stock items** in the farm database."
+            lines = [
+                f"• **{item.get('item_name', 'Feed Item')}**: **{item.get('quantity', 0)} {item.get('unit', 'kg')}** in warehouse"
+                for item in inv
+            ]
+            return "Sir, here is the current warehouse feed inventory:\n\n" + "\n".join(lines)
+
+        if tool_name == "get_milk_yield_records":
+            recs = data.get("records", [])
+            if not recs:
+                return f"Sir, no milk yield records found for **Cow {data.get('cattle_id', '')}**."
+            r = recs[0]
+            if is_hindi:
+                return (
+                    f"सर, **गाय {r.get('cattle_id')}** का दूध रिकॉर्ड (**{r.get('record_date')}**):\n\n"
+                    f"• **दूध उत्पादन:** **{r.get('yield_litres')} Litres**\n"
+                    f"• **सत्र:** **{r.get('session')} session**"
+                )
+            return (
+                f"Sir, milk yield record for **{r.get('cattle_id')}** (**{r.get('record_date')}**):\n\n"
+                f"• **Milk Yield:** **{r.get('yield_litres')} Litres**\n"
+                f"• **Session:** **{r.get('session')} session**"
+            )
+
+        if tool_name == "get_breeding_and_calving_records":
+            is_tanglish = any(w in lower_q for w in ["eppo", "nadandhuchu", "oda", "irukku", "evlo", "pannanga"])
+            b_recs = data.get("breeding_records", [])
+            c_recs = data.get("calving_records", [])
+            if b_recs:
+                b = b_recs[0]
+                if is_tanglish:
+                    return (
+                        f"Sir, **{b.get('cattle_id')}** oda kadaisi breeding **{b.get('breeding_date')}** anru "
+                        f"**AI straw #{b.get('straw_id')}** ({b.get('method', 'AI')}) moolam nadandhuchu."
+                    )
+                return (
+                    f"Sir, **{b.get('cattle_id')}** was last bred on **{b.get('breeding_date')}** "
+                    f"using **AI straw #{b.get('straw_id')}** ({b.get('method', 'AI')})."
+                )
+            if c_recs:
+                c = c_recs[0]
+                return (
+                    f"Sir, **{c.get('cattle_id')}** last calved on **{c.get('calving_date')}**.\n\n"
+                    f"• **Status:** **{c.get('status')}**"
+                )
+            return f"Sir, no breeding or calving records found for **Cow {data.get('cattle_id', '')}**."
 
         if tool_name == "get_single_day_cattle_graphical_analytics":
             chart_json = json.dumps(data.get("chart_data", {}), indent=2)
@@ -1041,7 +1136,7 @@ class AgentRouter:
                 if prods:
                     p_items = []
                     for p in prods[:2]:
-                        p_items.append(f"• **{p.get('name')}** ({p.get('url', 'https://chimertech.shop')})\n  - பயன்பாடு: {p.get('purpose', 'ஆரம்ப சோதனைக் கருவி')}")
+                        p_items.append(f"• **{p.get('name')}** ({p.get('url', '[https://chimertech.shop](https://chimertech.shop)')})\n  - பயன்பாடு: {p.get('purpose', 'ஆரம்ப சோதனைக் கருவி')}")
                     sections.append(f"🩺 **பரிந்துரைக்கப்படும் சைமர்டெக் தயாரிப்பு (Recommended Chimertech Product):**\n" + "\n".join(p_items) + "\n")
                 sections.append("⚠️ **கால்நடை மருத்துவர் ஆலோசனை:**\n• தீவிர காய்ச்சல், கடுமையான வலி அல்லது பால்/சாணத்தில் ரத்தம் காணப்பட்டால் உடனடியாக கால்நடை மருத்துவரை அணுகவும்.")
                 return "\n".join(sections).strip()
@@ -1057,7 +1152,7 @@ class AgentRouter:
             if prods:
                 p_items = []
                 for p in prods[:2]:
-                    p_items.append(f"• **{p.get('name')}** ({p.get('url', 'https://chimertech.shop')})\n  - Purpose: {p.get('purpose', 'Early screening & supportive care')}")
+                    p_items.append(f"• **{p.get('name')}** ({p.get('url', '[https://chimertech.shop](https://chimertech.shop)')})\n  - Purpose: {p.get('purpose', 'Early screening & supportive care')}")
                 sections.append(f"🩺 **Recommended Chimertech Product:**\n" + "\n".join(p_items) + "\n")
             sections.append("⚠️ **Veterinary Alert:**\n• If high fever, severe pain, or rapid worsening occurs, call your veterinarian promptly.")
             return "\n".join(sections).strip()
@@ -1181,6 +1276,16 @@ class AgentRouter:
             digits = re.findall(r'\d+', raw_cow)
             target_cow = f"COW{int(digits[0]):03d}" if digits else raw_cow
 
+        if _is_inventory_query(lower_u):
+            tool_spec = FARM_TOOLS.get("get_warehouse_inventory")
+            tool_result = await tool_spec["function"](item_query=user_text, farm_id=farm_id)
+            summary = self._fallback_tool_summary("get_warehouse_inventory", tool_result, user_text)
+            return summary, {
+                "executed": True,
+                "tool": "get_warehouse_inventory",
+                "result": tool_result
+            }
+
         # 0.5. Census, Cattle Detection Count & Cross-Camera Duplication
         is_census_request = any(phrase in lower_u for phrase in [
             "how many cattle", "how many cow", "how many animals", "cattle count", "cow count",
@@ -1223,7 +1328,7 @@ class AgentRouter:
             req_act = None
             if any(w in lower_u for w in ["mount", "heat", "estrus", "breeding", "சினைப்பருவம்"]):
                 req_act = "estrus"
-            elif any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
+            elif not _is_inventory_query(lower_u) and any(w in lower_u for w in ["feed", "eating", "fodder", "manger", "தீவனம்"]):
                 req_act = "feeding"
             elif any(w in lower_u for w in ["sick", "disease", "mastitis", "bcs", "நோய்"]):
                 req_act = "disease"
@@ -1251,7 +1356,7 @@ class AgentRouter:
             }
 
         # 3. Feeding queries
-        if any(w in lower_u for w in ["feed", "fodder", "manger", "eating", "eat", "grazing", "தீவனம்", "चारा"]):
+        if not _is_inventory_query(lower_u) and any(w in lower_u for w in ["feed", "fodder", "manger", "eating", "eat", "grazing", "தீவனம்", "चारा"]):
             tool_spec = FARM_TOOLS.get("get_feed_and_nutrition")
             tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow)
             summary = self._fallback_tool_summary("get_feed_and_nutrition", tool_result, user_text)
@@ -1379,4 +1484,3 @@ class AgentRouter:
         return resp, {"executed": False, "tool": None}
 
 tool_router = AgentRouter()
-
