@@ -1,8 +1,10 @@
 import asyncio
 import os
 import io
+import wave
 import tempfile
 import logging
+import httpx
 import numpy as np
 from typing import Optional, Dict, Any, Union
 from ..config import settings
@@ -46,6 +48,95 @@ def normalize_target_language(language: Optional[str]) -> Optional[str]:
     if lang_clean in {"en", "english"}:
         return "en"
     return lang_clean
+
+def pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000) -> bytes:
+    """Encodes raw 16-bit mono PCM into standard WAV bytes in memory."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(pcm_bytes)
+    return buf.getvalue()
+
+async def transcribe_groq_api(
+    audio_bytes: bytes,
+    filename: str = "audio.wav",
+    language: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Ultra-Fast (~0.2s - 0.5s) Cloud Whisper STT using Groq LPU API.
+    Zero server RAM usage, high accuracy for Tamil, Tanglish, and English.
+    """
+    groq_api_key = getattr(settings, "GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", "")
+    if not groq_api_key or not groq_api_key.strip():
+        return None
+
+    model_name = getattr(settings, "GROQ_WHISPER_MODEL", "whisper-large-v3-turbo") or "whisper-large-v3-turbo"
+    target_lang = normalize_target_language(language)
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {
+        "Authorization": f"Bearer {groq_api_key.strip()}"
+    }
+
+    # Determine audio MIME type
+    mime = "audio/wav"
+    ext = filename.split(".")[-1].lower() if "." in filename else "wav"
+    if ext == "mp3":
+        mime = "audio/mpeg"
+    elif ext in ("m4a", "mp4", "aac"):
+        mime = "audio/mp4"
+    elif ext == "ogg":
+        mime = "audio/ogg"
+    elif ext == "webm":
+        mime = "audio/webm"
+
+    data: Dict[str, Any] = {
+        "model": model_name,
+        "prompt": TAMIL_ENGLISH_PROMPT,
+        "response_format": "verbose_json",
+        "temperature": "0.0"
+    }
+    if target_lang:
+        data["language"] = target_lang
+
+    files = {
+        "file": (filename, audio_bytes, mime)
+    }
+
+    try:
+        start_time = asyncio.get_event_loop().time()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, headers=headers, data=data, files=files)
+            
+        elapsed = round(asyncio.get_event_loop().time() - start_time, 2)
+        if resp.status_code == 200:
+            result = resp.json()
+            text = result.get("text", "").strip()
+            detected_lang = result.get("language", target_lang or "ta")
+            duration = result.get("duration", 0)
+
+            # Block false Hindi detection on Tamil/Tanglish speech
+            if detected_lang == "hi":
+                detected_lang = "ta"
+
+            logger.info(f"[STT-Groq] Cloud Whisper completed in {elapsed}s: '{text}' (lang={detected_lang})")
+            return {
+                "text": text,
+                "language": detected_lang,
+                "confidence": 0.95 if text else 0.0,
+                "quality": "good" if text else "no_speech",
+                "duration": duration or elapsed,
+                "provider": "groq_cloud",
+                "latency_sec": elapsed
+            }
+        else:
+            logger.warning(f"[STT-Groq] Groq API returned status {resp.status_code}: {resp.text}. Falling back to local.")
+            return None
+    except Exception as e:
+        logger.warning(f"[STT-Groq] Groq API call failed: {e}. Falling back to local faster-whisper.")
+        return None
 
 class FasterWhisperSTT:
     def __init__(self):
@@ -219,6 +310,14 @@ class FasterWhisperSTT:
         if len(audio_bytes) < 1600:
             return {"text": "", "language": "ta", "confidence": 0.0, "quality": "noise", "duration": 0}
 
+        # 1. Try Groq Cloud Whisper (~0.2s) if API key is present
+        if getattr(settings, "GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", ""):
+            wav_bytes = pcm16_to_wav(audio_bytes, 16000)
+            groq_res = await transcribe_groq_api(wav_bytes, filename="audio.wav", language=language)
+            if groq_res is not None:
+                return groq_res
+
+        # 2. Local fallback
         return await asyncio.to_thread(self._transcribe_sync, audio_bytes, language, True, "audio.pcm")
 
     async def transcribe_audio_bytes(self, audio_bytes: bytes, language: Optional[str] = None) -> Dict[str, Any]:
@@ -232,11 +331,19 @@ class FasterWhisperSTT:
         language: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Transcribes encoded audio files (WAV, MP3, M4A, AAC, OGG, WebM) uploaded by mobile apps or web clients.
+        Transcribes encoded audio files (WAV, MP3, M4A, AAC, OGG, WebM).
+        Uses Groq Cloud Whisper (~0.2s) when GROQ_API_KEY is available,
+        with seamless fallback to optimized local faster-whisper.
         """
         if not file_bytes or len(file_bytes) < 32:
             return {"text": "", "language": "ta", "confidence": 0.0, "quality": "empty_file", "duration": 0}
 
+        # 1. Try Groq Cloud Whisper (~0.2s) if API key is present
+        groq_res = await transcribe_groq_api(file_bytes, filename=filename, language=language)
+        if groq_res is not None:
+            return groq_res
+
+        # 2. Local fallback
         return await asyncio.to_thread(self._transcribe_sync, file_bytes, language, False, filename)
 
 stt_engine = FasterWhisperSTT()

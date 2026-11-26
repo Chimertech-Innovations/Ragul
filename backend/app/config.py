@@ -31,7 +31,10 @@ class Settings(BaseSettings):
     LLM_MODEL_NAME: str = "deepseek-v4.1-flash-1017"
     LLM_TEMPERATURE: float = 0.2
     
-    # Audio & STT (faster-whisper)
+    # Audio & STT (Groq Cloud Whisper / faster-whisper)
+    STT_PROVIDER: str = "groq"
+    GROQ_API_KEY: str = ""
+    GROQ_WHISPER_MODEL: str = "whisper-large-v3-turbo"
     WHISPER_MODEL_SIZE: str = "base"
     WHISPER_DEVICE: str = "cpu"
     WHISPER_COMPUTE_TYPE: str = "int8"
