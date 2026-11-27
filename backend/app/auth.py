@@ -23,6 +23,13 @@ def _decode_jwt_payload_safe(token: str) -> Optional[Dict[str, Any]]:
         logger.debug(f"[Auth] Standard JWT payload decode notice: {e}")
     return None
 
+def _is_valid_id(val: Any) -> bool:
+    """Filters out empty values and Swagger UI's auto-generated 'string' dummy placeholders."""
+    if not val:
+        return False
+    s = str(val).strip()
+    return bool(s and s.lower() not in ("string", "null", "undefined", "none", "optional", "empty"))
+
 def extract_uid_from_request(
     request: Request,
     explicit_uid: Optional[str] = None,
@@ -36,16 +43,16 @@ def extract_uid_from_request(
        - Decodes Supabase JWT token payload to extract 'sub' (User UID)
        - If not a JWT, treats the Bearer token as a raw UID string
     """
-    if explicit_uid and str(explicit_uid).strip():
+    if _is_valid_id(explicit_uid):
         return str(explicit_uid).strip()
 
-    if explicit_user_id and str(explicit_user_id).strip():
+    if _is_valid_id(explicit_user_id):
         return str(explicit_user_id).strip()
 
     # Check custom headers
     header_uid = request.headers.get("X-User-UID") or request.headers.get("X-UID")
-    if header_uid and header_uid.strip():
-        return header_uid.strip()
+    if _is_valid_id(header_uid):
+        return str(header_uid).strip()
 
     # Check Authorization header
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
@@ -59,12 +66,12 @@ def extract_uid_from_request(
             payload = _decode_jwt_payload_safe(token)
             if payload:
                 jwt_uid = payload.get("sub") or payload.get("user_id") or payload.get("uid")
-                if jwt_uid:
+                if _is_valid_id(jwt_uid):
                     logger.info(f"[Auth] Extracted UID from JWT token: {jwt_uid}")
                     return str(jwt_uid)
 
         # If not a valid JWT, token is passed as raw UID string
-        if token:
+        if _is_valid_id(token):
             return token
 
     return None
@@ -83,7 +90,7 @@ async def resolve_user_farm(
     3. Fallback: Resolves to the first available farm in the database
     """
     # 1. Resolve by UID
-    if uid and str(uid).strip():
+    if _is_valid_id(uid):
         clean_uid = str(uid).strip()
         try:
             user = await supabase_db.fetch_one(
@@ -131,7 +138,7 @@ async def resolve_user_farm(
             logger.error(f"[Auth] Error querying user by UID '{clean_uid}': {e}")
 
     # 2. Resolve by explicit farm_id
-    if explicit_farm_id and str(explicit_farm_id).strip():
+    if _is_valid_id(explicit_farm_id):
         clean_fid = str(explicit_farm_id).strip()
         try:
             farm = await supabase_db.fetch_one(
