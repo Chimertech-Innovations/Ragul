@@ -200,7 +200,7 @@ class AgentRouter:
             tool_spec = FARM_TOOLS.get("get_farm_overview")
             if tool_spec:
                 tool_result = await tool_spec["function"](farm_id=farm_id, target_date=target_date_requested)
-                direct_summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text)
+                direct_summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text, lang=lang)
                 ret_proofs = tool_result.get("proof_images", []) if tool_result.get("total_activities_detected", 0) > 0 else []
                 return direct_summary, {
                     "executed": True,
@@ -232,7 +232,7 @@ class AgentRouter:
             tool_spec = FARM_TOOLS.get("get_cctv_proof_and_images")
             if tool_spec:
                 tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow, activity_type=req_act)
-                direct_summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text)
+                direct_summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text, lang=lang)
                 return direct_summary, {
                     "executed": True,
                     "tool": "get_cctv_proof_and_images",
@@ -309,14 +309,44 @@ class AgentRouter:
                     logger.warning(f"[AgentRouter] Tool '{tool_name}' execution error: {e}. Retrying safely...")
                     try:
                         tool_result = await tool_spec["function"](farm_id=farm_id)
-                    except Exception:
-                        tool_result = await tool_spec["function"]()
+                    except Exception as e2:
+                        try:
+                            tool_result = await tool_spec["function"]()
+                        except Exception as e3:
+                            logger.error(f"[AgentRouter] Tool '{tool_name}' failed completely: {e3}")
+                            tool_result = {
+                                "status": "unavailable",
+                                "message": f"Real-time sensor data temporarily unavailable for {tool_name}.",
+                                "proof_images": []
+                            }
+
+                if not isinstance(tool_result, dict):
+                    tool_result = {"data": tool_result}
 
                 proof_images = tool_result.get("proof_images", [])
 
                 # Second-Pass LLM Synthesis: The LLM reads the live tool data and formats with bullet points
+                lang_sys_prefix = ""
+                if lang in {"ta", "tamil"}:
+                    lang_sys_prefix = (
+                        "🚨 MANDATORY LANGUAGE RULE: You MUST write your ENTIRE response in pure TAMIL (தமிழ் எழுத்துகளில்).\n"
+                        "All headings, bullet points, numbers, animal details, and veterinary recommendations MUST BE IN TAMIL.\n"
+                        "NEVER output pure English headings like 'Urgent Health Warnings' or 'Veterinary Action Plan'!\n\n"
+                    )
+                elif lang in {"hi", "hindi"}:
+                    lang_sys_prefix = (
+                        "🚨 MANDATORY LANGUAGE RULE: You MUST write your ENTIRE response in pure HINDI (हिंदी लिपि में).\n"
+                        "All headings, bullet points, numbers, animal details, and veterinary recommendations MUST BE IN HINDI.\n"
+                        "NEVER output pure English headings like 'Urgent Health Warnings' or 'Veterinary Action Plan'!\n\n"
+                    )
+                elif lang == "tanglish":
+                    lang_sys_prefix = (
+                        "🚨 MANDATORY LANGUAGE RULE: You MUST write your ENTIRE response in friendly TANGLISH (Tamil words in English letters).\n"
+                        "NEVER output pure formal English!\n\n"
+                    )
+
                 synthesis_messages = [
-                    {"role": "system", "content": SECOND_PASS_SYNTHESIS_PROMPT}
+                    {"role": "system", "content": lang_sys_prefix + SECOND_PASS_SYNTHESIS_PROMPT}
                 ]
                 for turn in history[-4:]:
                     c = turn.get("content", "")
@@ -340,16 +370,19 @@ class AgentRouter:
                     lang_inst = (
                         "11. LANGUAGE REQUIREMENT (CRITICAL - DO NOT TRANSLATE TO ENGLISH):\n"
                         "The user asked in TAMIL. You MUST formulate your response entirely in Tamil script (தமிழ்).\n"
+                        "Translate all headings into Tamil (e.g. '⚠️ அவசர உடல்நல எச்சரிக்கைகள்', '🚨 கால்நடை மருத்துவ செயல் திட்டம்').\n"
                         "NEVER output pure English prose!"
                     )
                 elif lang in {"hi", "hindi", "hinglish"}:
                     lang_inst = (
                         "11. LANGUAGE REQUIREMENT (CRITICAL - DO NOT TRANSLATE TO ENGLISH):\n"
                         "The user asked in HINDI/HINGLISH. You MUST formulate your response in Hindi/Hinglish.\n"
+                        "Translate all headings into Hindi (e.g. '⚠️ महत्वपूर्ण स्वास्थ्य चेतावनी', '🚨 पशु चिकित्सा कार्य योजना').\n"
                         "NEVER output pure English prose!"
                     )
 
                 synthesis_prompt = (
+                    f"{lang_sys_prefix}"
                     f"Current Real-Time: {curr_time_str}. Today is {today_str}, yesterday was {yesterday_str}.\n"
                     f"User asked: '{user_text}' (Detected Language: {lang})\n\n"
                     f"Retrieved Farm Vision & Telemetry Data for '{tool_name}':\n"
@@ -389,7 +422,7 @@ class AgentRouter:
                     }
 
                 # Structured bullet-point fallback
-                direct_summary = self._fallback_tool_summary(tool_name, tool_result, user_text)
+                direct_summary = self._fallback_tool_summary(tool_name, tool_result, user_text, lang=lang)
                 return direct_summary, {
                     "executed": True,
                     "tool": tool_name,
@@ -404,7 +437,7 @@ class AgentRouter:
             return final_clean, {"executed": False, "tool": None}
 
         # 4. Fallback if LLM is Offline / Unreachable
-        return await self._execute_offline_fallback(user_text, history, farm_id=farm_id)
+        return await self._execute_offline_fallback(user_text, history, farm_id=farm_id, lang=lang)
 
     def _is_greeting_or_introduction(self, user_text: str) -> bool:
         """Determines if the message is purely a greeting or asking for identity."""
@@ -578,11 +611,12 @@ class AgentRouter:
             f"Rest assured, Sir, all your dairy records and camera detections remain 100% private and protected."
         )
 
-    def _fallback_tool_summary(self, tool_name: str, data: Dict[str, Any], user_query: str) -> str:
+    def _fallback_tool_summary(self, tool_name: str, data: Dict[str, Any], user_query: str, lang: Optional[str] = None) -> str:
         """Lightweight structured bullet-point fallback formatter."""
         lower_q = user_query.lower()
-        is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_query)
-        is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_query)
+        is_tamil = (lang in {"ta", "tamil"}) or any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_query)
+        is_hindi = (lang in {"hi", "hindi"}) or any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_query)
+        is_tanglish = (lang == "tanglish") or any(w in lower_q for w in ["ku", "evvalavu", "evlo", "irukka", "irukku", "inaiku", "pannunga", "paal", "theevanam", "illa"])
 
         if tool_name == "get_compliance_audit_report":
             return data.get("summary") or "Compliance audit completed."
@@ -821,23 +855,91 @@ class AgentRouter:
             sick = data.get("sick_cattle", [])
             action = data.get("recommended_action", "Isolate flagged animals.")
             if sick:
-                items = []
-                for s in sick:
-                    warns = ", ".join(s.get("warnings", []))
-                    items.append(
-                        f"• **{s.get('cattle_id')}** ({s.get('breed')}): **{s.get('disease_status')}** (BCS: **{s.get('bcs_score')}/5.0**, Weight: **{s.get('estimated_weight_kg')} kg**)\n"
-                        f"  - *Warning:* {warns}\n"
-                        f"  - *Last Seen:* {s.get('last_seen')}"
+                if is_tamil:
+                    items = []
+                    for s in sick:
+                        cid = s.get("cattle_id")
+                        name = s.get("name")
+                        name_str = f" ({name})" if name and name != f"Cow #{cid}" else ""
+                        items.append(
+                            f"• **மாடு #{cid}**{name_str}: **குறைவான உடல்நிலை (Unhealthy)** (BCS: **{s.get('bcs_score')}/5.0**, எடை: **{s.get('estimated_weight_kg')} கிலோ**)\n"
+                            f"  - *எச்சரிக்கை:* குறைந்த உடல்நிலை (BCS {s.get('bcs_score')}/5.0 - ஊட்டச்சத்து தீவனம் தேவை)\n"
+                            f"  - *கடைசியாக பார்த்த நேரம்:* **{s.get('last_seen')}**"
+                        )
+                    items_str = "\n".join(items)
+                    return (
+                        f"⚠️ **அவசர உடல்நல எச்சரிக்கைகள் (Urgent Health Warnings):**\n\n"
+                        f"{items_str}\n\n"
+                        f"🚨 **கால்நடை மருத்துவ செயல் திட்டம் (Veterinary Action Plan):**\n"
+                        f"• ஊட்டச்சத்து நிறைந்த தீவனம், தாது உப்பு கலவை மற்றும் தூய குடிநீர் உடனே வழங்கவும்.\n"
+                        f"• உடல் வெப்பநிலையைப் பரிசோதித்து, தேவைப்பட்டால் கால்நடை மருத்துவரை அணுகவும்.\n\n"
+                        f"📸 *CCTV ஆதாரப் படங்கள் கீழே இணைக்கப்பட்டுள்ளன.*"
                     )
-                items_str = "\n".join(items)
-                return (
-                    f"⚠️ **Urgent Health Warnings & Disease Alerts:**\n\n"
-                    f"{items_str}\n\n"
-                    f"🚨 **Veterinary Action Plan:**\n"
-                    f"• {action}\n"
-                    f"• Check rectal temperature and isolate in quarantine stall.\n\n"
-                    f"📸 *CCTV capture proof images are displayed below.*"
-                )
+                elif is_hindi:
+                    items = []
+                    for s in sick:
+                        cid = s.get("cattle_id")
+                        name = s.get("name")
+                        name_str = f" ({name})" if name and name != f"Cow #{cid}" else ""
+                        items.append(
+                            f"• **गाय #{cid}**{name_str}: **अस्वस्थ (Unhealthy)** (BCS: **{s.get('bcs_score')}/5.0**, वजन: **{s.get('estimated_weight_kg')} kg**)\n"
+                            f"  - *चेतावनी:* कमजोर शारीरिक स्थिति (BCS {s.get('bcs_score')}/5.0 - पोषक आहार आवश्यक)\n"
+                            f"  - *अंतिम देखा गया समय:* **{s.get('last_seen')}**"
+                        )
+                    items_str = "\n".join(items)
+                    return (
+                        f"⚠️ **महत्वपूर्ण स्वास्थ्य चेतावनी (Urgent Health Warnings):**\n\n"
+                        f"{items_str}\n\n"
+                        f"🚨 **पशु चिकित्सा कार्य योजना (Veterinary Action Plan):**\n"
+                        f"• पौष्टिक आहार, खनिज मिश्रण (Mineral Mixture) और स्वच्छ पानी तुरंत उपलब्ध कराएं।\n"
+                        f"• शरीर का तापमान जांचें और आवश्यकता पड़ने पर पशु चिकित्सक से परामर्श लें।\n\n"
+                        f"📸 *सीसीटीवी फुटेज और प्रमाण चित्र नीचे प्रदर्शित हैं।*"
+                    )
+                elif is_tanglish:
+                    items = []
+                    for s in sick:
+                        cid = s.get("cattle_id")
+                        name = s.get("name")
+                        name_str = f" ({name})" if name and name != f"Cow #{cid}" else ""
+                        items.append(
+                            f"• **Cow #{cid}**{name_str}: **Unhealthy** (BCS: **{s.get('bcs_score')}/5.0**, Weight: **{s.get('estimated_weight_kg')} kg**)\n"
+                            f"  - *Warning:* Low Body Condition (BCS {s.get('bcs_score')}/5.0 - Feed boost theva)\n"
+                            f"  - *Last Seen:* **{s.get('last_seen')}**"
+                        )
+                    items_str = "\n".join(items)
+                    return (
+                        f"⚠️ **Health Warnings & Disease Alerts:**\n\n"
+                        f"{items_str}\n\n"
+                        f"🚨 **Veterinary Action Plan:**\n"
+                        f"• High energy feed and mineral mixture kudunga.\n"
+                        f"• Temperature check pannitu vet doctor-ah consult pannunga.\n\n"
+                        f"📸 *CCTV capture proof images keezha irukku.*"
+                    )
+                else:
+                    items = []
+                    for s in sick:
+                        warns = ", ".join(s.get("warnings", []))
+                        items.append(
+                            f"• **{s.get('cattle_id')}** ({s.get('breed')}): **{s.get('disease_status')}** (BCS: **{s.get('bcs_score')}/5.0**, Weight: **{s.get('estimated_weight_kg')} kg**)\n"
+                            f"  - *Warning:* {warns}\n"
+                            f"  - *Last Seen:* {s.get('last_seen')}"
+                        )
+                    items_str = "\n".join(items)
+                    return (
+                        f"⚠️ **Urgent Health Warnings & Disease Alerts:**\n\n"
+                        f"{items_str}\n\n"
+                        f"🚨 **Veterinary Action Plan:**\n"
+                        f"• {action}\n"
+                        f"• Check rectal temperature and isolate in quarantine stall.\n\n"
+                        f"📸 *CCTV capture proof images are displayed below.*"
+                    )
+
+            if is_tamil:
+                return "வணக்கம் ஐயா! மகிழ்ச்சியான செய்தி! பண்ணையில் நோய்வாய்ப்பட்ட அல்லது தீவிர BCS எச்சரிக்கைகள் உள்ள மாடுகள் எதுவும் இல்லை. அனைத்து மாடுகளும் நலமாக உள்ளன."
+            elif is_hindi:
+                return "सर, अच्छी खबर है! फार्म में कोई भी बीमार या कमजोर गाय दर्ज नहीं है। सभी पशु पूरी तरह स्वस्थ हैं।"
+            elif is_tanglish:
+                return "Sir, nalla vishayam! Farm-la entha cow-kum sick alert illa. Ella maatum nalla healthy-ah irukku."
             return "Sir, excellent news! No sick cattle or critical BCS health warnings detected. All animals in the herd are healthy."
 
         elif tool_name == "get_cctv_proof_and_images":
@@ -1109,6 +1211,20 @@ class AgentRouter:
                         f"• **பண்ணைத் தரவு:** {Day_Word} பண்ணைத் தரவு தரவுத்தளத்தில் கிடைக்கவில்லை.\n"
                         f"• **அடுத்த நடவடிக்கை:** தயவுசெய்து இந்த தேதிக்கான தரவை தரவுத்தளத்தில் பதிவேற்றவும்."
                     )
+                elif is_hindi:
+                    return (
+                        f"नमस्ते सर! **{Day_Word} फार्म स्थिति** ({date_label}):\n\n"
+                        f"• **निगरानी स्थिति:** **0 गतिविधियाँ** (कैमरा रिकॉर्ड नहीं मिले)।\n"
+                        f"• **डेटाबेस स्थिति:** {Day_Word} के लिए कोई टेलीमेट्री डेटा उपलब्ध नहीं है।\n"
+                        f"• **अगला कदम:** कृपया डेटाबेस में डेटा अपलोड करें या लाइव कैमरा स्ट्रीम जांचें।"
+                    )
+                elif is_tanglish:
+                    return (
+                        f"Vanakkam sir! **{Day_Word} farm status** ({date_label}):\n\n"
+                        f"• **Monitoring Status:** **0 events** logged across all cameras.\n"
+                        f"• **Telemetry Status:** {day_word} farm data database-la record aagala.\n"
+                        f"• **Next Step:** Live camera feed verify pannunga."
+                    )
                 return (
                     f"Sir, here is **{Day_Word}'s Farm Status** ({date_label}):\n\n"
                     f"• **Vision Detections:** **0 events** logged across all cameras.\n"
@@ -1116,7 +1232,105 @@ class AgentRouter:
                     f"• **Next Step:** Please upload data into the database or verify live camera feed."
                 )
 
-            # 1. Health Status Line
+            cattle_details = data.get("cattle_details", [])
+            uniq_cnt = len(cattle_details) if cattle_details else herd_cnt
+
+            if is_tamil:
+                if suspected:
+                    d_cows = ", ".join([f"**{d.get('cattle_id')}** ({d.get('disease')})" for d in suspected[:2]])
+                    disease_line = f"• ⚠️ **உடல்நல எச்சரிக்கை:** {d_cows} மாடுகளில் நோய் அறிகுறி. உடனே தனிமைப்படுத்தவும்.\n"
+                elif low_bcs:
+                    b_cows = ", ".join([f"**{b.get('cattle_id')}** (BCS: {b.get('bcs_score')})" for b in low_bcs[:2]])
+                    disease_line = f"• ⚠️ **குறைந்த BCS எச்சரிக்கை:** {b_cows} மாடுகளுக்கு உடல் நிலை குறைவு (BCS < 2.0). ஊட்டச்சத்து தீவனம் வழங்கவும்.\n"
+                else:
+                    disease_line = "• **உடல்நல நிலை:** அனைத்து மாடுகளும் ஆரோக்கியமாக உள்ளன. நோய் அறிகுறிகள் இல்லை.\n"
+
+                if estrus_alerts:
+                    e_first = estrus_alerts[0]
+                    e_cid = e_first.get("cattle_id", "Cattle")
+                    e_cam = e_first.get("camera_id", "CAM01")
+                    e_time = e_first.get("time", "")
+                    e_conf = e_first.get("confidence", "85%")
+                    estrus_line = (
+                        f"• 🔥 **சினைப்பருவ எச்சரிக்கை (Heat Alert):** **{e_cid}** மாடு சினைப்பருவ அறிகுறிகளுடன் கேமரா **{e_cam}**-ல் ({e_conf} துல்லியம்) பதிவாகியுள்ளது.\n"
+                        f"• 🩺 **பரிந்துரை:** சினை ஊசி போடுவதற்கான உகந்த நேரம் (12-18 மணி நேரம்). **Chimertech Visual AI Insemination Gun** மற்றும் **Estrus Detection Kit** பயன்படுத்த பரிந்துரைக்கப்படுகிறது.\n"
+                    )
+                else:
+                    estrus_line = f"• **சினைப்பருவம் (Heat):** {Day_Word} சினைப்பருவ அறிகுறிகள் எதுவும் பதிவாகவில்லை. மாடுகள் இயல்பாக உள்ளன.\n"
+
+                return (
+                    f"வணக்கம் ஐயா! **{farm_name}** {Day_Word} பண்ணை நிலவரம் ({date_label}):\n\n"
+                    f"• **கண்காணிப்பு சுருக்கம்:** **{uniq_cnt} மாடுகள்** கண்காணிக்கப்பட்டு, **{total_acts} நிகழ்வுகள்** பதிவாகின.\n"
+                    f"{estrus_line}"
+                    f"{disease_line}"
+                    f"• **தீவன நிலை:** **{feed_cnt} தீவன நிகழ்வுகள்** பதிவாகியுள்ளன.\n\n"
+                    f"📸 *சிசிடிவி புகைப்பட ஆதாரங்கள் கீழே இணைக்கப்பட்டுள்ளன.*"
+                )
+
+            elif is_hindi:
+                if suspected:
+                    d_cows = ", ".join([f"**{d.get('cattle_id')}** ({d.get('disease')})" for d in suspected[:2]])
+                    disease_line = f"• ⚠️ **स्वास्थ्य चेतावनी:** {d_cows} में बीमारी के लक्षण हैं। पशु को तुरंत अलग रखें।\n"
+                elif low_bcs:
+                    b_cows = ", ".join([f"**{b.get('cattle_id')}** (BCS: {b.get('bcs_score')})" for b in low_bcs[:2]])
+                    disease_line = f"• ⚠️ **कमजोर शारीरिक स्थिति:** {b_cows} का BCS 2.0 से कम है। पौष्टिक आहार दें।\n"
+                else:
+                    disease_line = "• **स्वास्थ्य स्थिति:** सभी पशु पूरी तरह स्वस्थ हैं। कोई बीमारी दर्ज नहीं है।\n"
+
+                if estrus_alerts:
+                    e_first = estrus_alerts[0]
+                    e_cid = e_first.get("cattle_id", "गाय")
+                    e_cam = e_first.get("camera_id", "CAM01")
+                    e_time = e_first.get("time", "")
+                    e_conf = e_first.get("confidence", "85%")
+                    estrus_line = (
+                        f"• 🔥 **मद / हीट चेतावनी:** **{e_cid}** गाय हीट में पाई गई है (**{e_cam}** पर {e_conf} सटीकता)।\n"
+                        f"• 🩺 **सिफारिश:** कृत्रिम गर्भाधान (AI) के लिए उपयुक्त समय (12-18 घंटे)। **Chimertech Visual AI Insemination Gun** उपयोग करने की सलाह दी जाती है।\n"
+                    )
+                else:
+                    estrus_line = f"• **मद / हीट स्थिति:** {Day_Word} कोई हीट लक्षण दर्ज नहीं हुए हैं। सभी पशु सामान्य हैं।\n"
+
+                return (
+                    f"नमस्ते सर! **{farm_name}** फार्म का **{Day_Word} स्थिति विवरण** ({date_label}):\n\n"
+                    f"• **निगरानी सारांश:** **{uniq_cnt} पशु** सक्रिय निगरानी में हैं, कुल **{total_acts} गतिविधियाँ** दर्ज हुईं।\n"
+                    f"{estrus_line}"
+                    f"{disease_line}"
+                    f"• **चारा सेवन:** **{feed_cnt} बार** चारा खाने की गतिविधियाँ दर्ज हुईं।\n\n"
+                    f"📸 *सीसीटीवी फुटेज और प्रमाण चित्र नीचे संलग्न हैं।*"
+                )
+
+            elif is_tanglish:
+                if suspected:
+                    d_cows = ", ".join([f"**{d.get('cattle_id')}** ({d.get('disease')})" for d in suspected[:2]])
+                    disease_line = f"• ⚠️ **Health Alert:** {d_cows}-la disease symptom suspect aaguthu. Vet check panni isolate pannunga.\n"
+                elif low_bcs:
+                    b_cows = ", ".join([f"**{b.get('cattle_id')}** (BCS: {b.get('bcs_score')})" for b in low_bcs[:2]])
+                    disease_line = f"• ⚠️ **Low BCS Alert:** {b_cows} BCS 2.0 keezha irukku. Energy feed adhigam kudunga.\n"
+                else:
+                    disease_line = "• **Health Status:** Ella maatum Healthy-ah irukku. Disease flags ethum illa.\n"
+
+                if estrus_alerts:
+                    e_first = estrus_alerts[0]
+                    e_cid = e_first.get("cattle_id", "Cow")
+                    e_cam = e_first.get("camera_id", "CAM01")
+                    e_conf = e_first.get("confidence", "85%")
+                    estrus_line = (
+                        f"• 🔥 **Heat / Estrus Alert:** **{e_cid}** camera **{e_cam}**-la active mounting-la ({e_conf} confidence) detect aagirukku.\n"
+                        f"• 🩺 **Breeding Advice:** 12-18 hours-kulla AI pannunga.\n"
+                    )
+                else:
+                    estrus_line = f"• **Heat / Estrus:** Inaiku mounting / heat signs ethuvum illa.\n"
+
+                return (
+                    f"Vanakkam sir! **{farm_name}** farm-oda **{Day_Word} status** ({date_label}):\n\n"
+                    f"• **Cattle Monitoring:** **{uniq_cnt} maadu** active camera surveillance-la irukku, **{total_acts} events** log aagirukku.\n"
+                    f"{estrus_line}"
+                    f"{disease_line}"
+                    f"• **Feed Status:** **{feed_cnt} feeding events** feed alley-la record aagirukku.\n\n"
+                    f"📸 *CCTV proof images keezha attach aagiyirukku.*"
+                )
+
+            # English Default
             if suspected:
                 d_cows = ", ".join([f"**{d.get('cattle_id')}** ({d.get('disease')})" for d in suspected[:2]])
                 disease_line = f"• ⚠️ **Health Alert:** Suspected disease in {d_cows}. Isolate for veterinary check.\n"
@@ -1126,7 +1340,6 @@ class AgentRouter:
             else:
                 disease_line = "• **Health Status:** All cattle Healthy. No disease flags or low BCS warnings.\n"
 
-            # 2. Estrus Line
             if estrus_alerts:
                 e_first = estrus_alerts[0]
                 e_cid = e_first.get("cattle_id", "Cattle")
@@ -1139,19 +1352,6 @@ class AgentRouter:
                 )
             else:
                 estrus_line = f"• **Heat / Estrus:** No active mounting or standing heat detected {day_word}.\n"
-
-            cattle_details = data.get("cattle_details", [])
-            uniq_cnt = len(cattle_details) if cattle_details else herd_cnt
-
-            if is_tamil:
-                return (
-                    f"வணக்கம் ஐயா! **{farm_name}** {Day_Word} பண்ணை நிலவரம் ({date_label}):\n\n"
-                    f"• **கண்காணிப்பு சுருக்கம்:** **{uniq_cnt} மாடுகள்** கண்காணிக்கப்பட்டு, **{total_acts} நிகழ்வுகள்** பதிவாகின.\n"
-                    f"{estrus_line}"
-                    f"{disease_line}"
-                    f"• **தீவன நிலை:** **{feed_cnt} தீவன நிகழ்வுகள்** பதிவாகியுள்ளன.\n\n"
-                    f"📸 *சிசிடிவி புகைப்பட ஆதாரங்கள் கீழே இணைக்கப்பட்டுள்ளன. வரைபடம் இடது பக்கத்தில் திறக்கப்பட்டுள்ளது.*"
-                )
 
             return (
                 f"Sir, here is {day_word}'s farm status ({date_label}):\n\n"
@@ -1303,11 +1503,12 @@ class AgentRouter:
 
         return "Sir, your farm operations are running normally."
 
-    async def _execute_offline_fallback(self, user_text: str, history: list, farm_id: Optional[str] = None) -> Tuple[str, Dict[str, Any]]:
+    async def _execute_offline_fallback(self, user_text: str, history: list, farm_id: Optional[str] = None, lang: Optional[str] = None) -> Tuple[str, Dict[str, Any]]:
         """Contextual multilingual fallback when LLM server is loading."""
         lower_u = user_text.lower()
-        is_tamil = any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_text)
-        is_hindi = any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_text)
+        is_tamil = (lang in {"ta", "tamil"}) or any(ord(char) >= 0x0B80 and ord(char) <= 0x0BFF for char in user_text)
+        is_hindi = (lang in {"hi", "hindi"}) or any(ord(char) >= 0x0900 and ord(char) <= 0x097F for char in user_text)
+        is_tanglish = (lang == "tanglish") or any(w in lower_u for w in ["ku", "evvalavu", "evlo", "irukka", "irukku", "inaiku", "pannunga", "paal", "theevanam", "illa"])
 
         # 0. Check Greeting first!
         if self._is_greeting_or_introduction(user_text):
@@ -1324,7 +1525,7 @@ class AgentRouter:
         if _is_inventory_query(lower_u):
             tool_spec = FARM_TOOLS.get("get_warehouse_inventory")
             tool_result = await tool_spec["function"](item_query=user_text, farm_id=farm_id)
-            summary = self._fallback_tool_summary("get_warehouse_inventory", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_warehouse_inventory", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_warehouse_inventory",
@@ -1342,7 +1543,7 @@ class AgentRouter:
         if is_census_request:
             tool_spec = FARM_TOOLS.get("get_cattle_count_and_camera_analytics")
             tool_result = await tool_spec["function"](farm_id=farm_id)
-            summary = self._fallback_tool_summary("get_cattle_count_and_camera_analytics", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_cattle_count_and_camera_analytics", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_cattle_count_and_camera_analytics",
@@ -1380,7 +1581,7 @@ class AgentRouter:
 
             tool_spec = FARM_TOOLS.get("get_cctv_proof_and_images")
             tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow, activity_type=req_act)
-            summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_cctv_proof_and_images", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_cctv_proof_and_images",
@@ -1392,7 +1593,7 @@ class AgentRouter:
         if any(w in lower_u for w in ["estrus", "heat", "mounting", "breeding", "insemination", "சினைப்பருவம்", "மத"]):
             tool_spec = FARM_TOOLS.get("get_estrus_and_heat_alerts")
             tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow)
-            summary = self._fallback_tool_summary("get_estrus_and_heat_alerts", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_estrus_and_heat_alerts", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_estrus_and_heat_alerts",
@@ -1404,7 +1605,7 @@ class AgentRouter:
         if not _is_inventory_query(lower_u) and any(w in lower_u for w in ["feed", "fodder", "manger", "eating", "eat", "grazing", "தீவனம்", "चारा"]):
             tool_spec = FARM_TOOLS.get("get_feed_and_nutrition")
             tool_result = await tool_spec["function"](farm_id=farm_id, cattle_id=target_cow)
-            summary = self._fallback_tool_summary("get_feed_and_nutrition", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_feed_and_nutrition", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_feed_and_nutrition",
@@ -1422,7 +1623,7 @@ class AgentRouter:
         if any(w in lower_u for w in CAMERA_STATUS_WORDS):
             tool_spec = FARM_TOOLS.get("get_cameras_status")
             tool_result = await tool_spec["function"](farm_id=farm_id)
-            summary = self._fallback_tool_summary("get_cameras_status", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_cameras_status", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_cameras_status",
@@ -1433,7 +1634,7 @@ class AgentRouter:
         if target_cow:
             tool_spec = FARM_TOOLS.get("get_cow_activity_history")
             tool_result = await tool_spec["function"](cow_id=target_cow, farm_id=farm_id)
-            summary = self._fallback_tool_summary("get_cow_activity_history", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_cow_activity_history", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_cow_activity_history",
@@ -1446,7 +1647,7 @@ class AgentRouter:
         if any(w in lower_u for w in VET_WORDS):
             tool_spec = FARM_TOOLS.get("veterinary_and_products_rag")
             tool_result = await tool_spec["function"](query=user_text, farm_id=farm_id)
-            summary = self._fallback_tool_summary("veterinary_and_products_rag", tool_result, user_text)
+            summary = self._fallback_tool_summary("veterinary_and_products_rag", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "veterinary_and_products_rag",
@@ -1464,7 +1665,7 @@ class AgentRouter:
             tool_spec = FARM_TOOLS.get("get_workers_and_staff_data")
             d_str = "Yesterday" if any(y in lower_u for y in ["yester", "நேற்று", "कल"]) else "Today"
             tool_result = await tool_spec["function"](farm_id=farm_id, date_str=d_str)
-            summary = self._fallback_tool_summary("get_workers_and_staff_data", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_workers_and_staff_data", tool_result, user_text, lang=lang)
             return summary, {
                 "executed": True,
                 "tool": "get_workers_and_staff_data",
@@ -1487,7 +1688,7 @@ class AgentRouter:
             tool_spec = FARM_TOOLS.get("get_farm_overview")
             d_target = "yesterday" if any(y in lower_u for y in ["yester", "நேற்று", "कल"]) else "today"
             tool_result = await tool_spec["function"](farm_id=farm_id, target_date=d_target)
-            summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text)
+            summary = self._fallback_tool_summary("get_farm_overview", tool_result, user_text, lang=lang)
             ret_proofs = tool_result.get("proof_images", []) if tool_result.get("total_activities_detected", 0) > 0 else []
             return summary, {
                 "executed": True,

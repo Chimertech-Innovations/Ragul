@@ -23,11 +23,11 @@ class LLMClient:
                 or "sk-jarvislabs-placeholder"
             )
             base_url = settings.LLM_API_BASE.rstrip("/")
-            # 15-second timeout to allow remote JarvisLabs / OpenAI inference to complete comfortably
+            # 30-second timeout to allow remote JarvisLabs / OpenAI inference to complete comfortably
             self._async_openai_client = AsyncOpenAI(
                 base_url=base_url, 
                 api_key=api_key,
-                timeout=httpx.Timeout(15.0, connect=5.0),
+                timeout=httpx.Timeout(30.0, connect=10.0),
                 max_retries=1
             )
         return self._async_openai_client

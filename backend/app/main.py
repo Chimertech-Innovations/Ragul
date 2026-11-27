@@ -440,13 +440,25 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
     )
 
     # Process with custom Agent Router with language context
-    response_text, tool_meta = await tool_router.process_user_message(
-        user_text=user_text,
-        history=history,
-        session_id=session_id,
-        farm_id=request.farm_id,
-        detected_language=detected_lang
-    )
+    try:
+        response_text, tool_meta = await tool_router.process_user_message(
+            user_text=user_text,
+            history=history,
+            session_id=session_id,
+            farm_id=request.farm_id,
+            detected_language=detected_lang
+        )
+    except Exception as e:
+        logger.error(f"[ChatText] Error processing user message: {e}", exc_info=True)
+        if detected_lang in {"ta", "tamil"}:
+            response_text = "வணக்கம் ஐயா! பண்ணை தகவல்களை பெறுவதில் தற்காலிக தாமதம் ஏற்பட்டுள்ளது. நான் உங்களுக்கு உதவ தயாராக உள்ளேன், உங்கள் கேள்வியை மீண்டும் கேட்கலாம்."
+        elif detected_lang in {"hi", "hindi"}:
+            response_text = "नमस्ते सर! फार्म डेटा प्राप्त करने में थोड़ी देरी हो रही है। मैं आपकी सहायता के लिए तैयार हूँ, कृपया अपना प्रश्न दोबारा पूछें।"
+        elif detected_lang == "tanglish":
+            response_text = "Vanakkam sir! Farm data load aagarathula konjam issue irukku. Naan ungalukku help panna ready-ah irukken, unga question-ah thirumbi kelunga."
+        else:
+            response_text = "Hello! There was a brief delay retrieving the live farm data. I am ready to help, please feel free to ask your question again."
+        tool_meta = None
 
     proof_images = tool_meta.get("proof_images") if tool_meta else None
 
@@ -548,13 +560,25 @@ async def chat_audio_upload_endpoint(
         detected_language=detected_lang
     )
 
-    response_text, tool_meta = await tool_router.process_user_message(
-        user_text=transcribed_text,
-        history=history,
-        session_id=session_id,
-        farm_id=farm_id,
-        detected_language=detected_lang
-    )
+    try:
+        response_text, tool_meta = await tool_router.process_user_message(
+            user_text=transcribed_text,
+            history=history,
+            session_id=session_id,
+            farm_id=farm_id,
+            detected_language=detected_lang
+        )
+    except Exception as e:
+        logger.error(f"[ChatAudio] Error processing user message: {e}", exc_info=True)
+        if detected_lang in {"ta", "tamil"}:
+            response_text = "வணக்கம் ஐயா! பண்ணை தகவல்களை பெறுவதில் தற்காலிக தாமதம் ஏற்பட்டுள்ளது. நான் உங்களுக்கு உதவ தயாராக உள்ளேன், உங்கள் கேள்வியை மீண்டும் கேட்கலாம்."
+        elif detected_lang in {"hi", "hindi"}:
+            response_text = "नमस्ते सर! फार्म डेटा प्राप्त करने में थोड़ी देरी हो रही है। मैं आपकी सहायता के लिए तैयार हूँ, कृपया अपना प्रश्न दोबारा पूछें।"
+        elif detected_lang == "tanglish":
+            response_text = "Vanakkam sir! Farm data load aagarathula konjam issue irukku. Naan ungalukku help panna ready-ah irukken, unga question-ah thirumbi kelunga."
+        else:
+            response_text = "Hello! There was a brief delay retrieving the live farm data. I am ready to help, please feel free to ask your question again."
+        tool_meta = None
 
     proof_images = tool_meta.get("proof_images") if tool_meta else None
 

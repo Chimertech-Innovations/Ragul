@@ -48,6 +48,6 @@ class Settings(BaseSettings):
     
     # TTS Settings
     TTS_ENGINE: str = "browser_native"
-    DEFAULT_LANGUAGE: str = "en-US"
+    DEFAULT_LANGUAGE: str = "ta"
 
 settings = Settings()
