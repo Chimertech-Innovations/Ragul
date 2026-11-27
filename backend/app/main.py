@@ -40,6 +40,7 @@ from .memory.session_manager import session_manager
 from .audio.vad import vad_processor
 from .audio.stt import stt_engine, detect_language_from_text
 from .audio.tts import tts_engine
+from .auth import extract_uid_from_request, resolve_user_farm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ragul_api")
@@ -122,6 +123,8 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     language: Optional[str] = "auto"
     farm_id: Optional[str] = None
+    uid: Optional[str] = None
+    user_id: Optional[str] = None
     return_audio_base64: Optional[bool] = False
 
 class ChatResponse(BaseModel):
@@ -135,6 +138,8 @@ class ChatResponse(BaseModel):
     proof_images: Optional[List[Dict[str, Any]]] = None
     detected_language: str
     stt_confidence: Optional[float] = None
+    farm_id: Optional[str] = None
+    user_name: Optional[str] = None
 
 class TTSRequest(BaseModel):
     text: str
@@ -428,6 +433,12 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
             detail="Either 'message' (text) or 'audio_base64' (audio data) must be provided."
         )
 
+    # Resolve Authenticated User & Farm Context via UID / Token / Header
+    extracted_uid = extract_uid_from_request(http_req, explicit_uid=request.uid, explicit_user_id=request.user_id)
+    auth_ctx = await resolve_user_farm(uid=extracted_uid, explicit_farm_id=request.farm_id)
+    effective_farm_id = auth_ctx.get("farm_id") or request.farm_id
+    user_name = auth_ctx.get("user_name")
+
     session_id = await session_manager.get_or_create_session(request.session_id)
     history = await session_manager.get_recent_history(session_id)
 
@@ -439,13 +450,13 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         detected_language=detected_lang
     )
 
-    # Process with custom Agent Router with language context
+    # Process with custom Agent Router with language context and resolved farm_id
     try:
         response_text, tool_meta = await tool_router.process_user_message(
             user_text=user_text,
             history=history,
             session_id=session_id,
-            farm_id=request.farm_id,
+            farm_id=effective_farm_id,
             detected_language=detected_lang
         )
     except Exception as e:
@@ -494,7 +505,9 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         tool_meta=tool_meta if (tool_meta and tool_meta.get("executed")) else None,
         proof_images=proof_images,
         detected_language=detected_lang,
-        stt_confidence=stt_conf
+        stt_confidence=stt_conf,
+        farm_id=effective_farm_id,
+        user_name=user_name
     )
 
 @app.post("/api/chat/audio")
@@ -504,7 +517,9 @@ async def chat_audio_upload_endpoint(
     file: UploadFile = File(..., description="Recorded audio file (.wav, .mp3, .m4a, .aac, .ogg, .webm)"),
     session_id: Optional[str] = Form(None, description="Optional conversation session ID"),
     language: Optional[str] = Form("auto", description="Target language: 'auto' (default: transcribes all languages spoken), or 'ta', 'hi', 'en'"),
-    farm_id: Optional[str] = Form(None, description="Optional target farm UUID"),
+    farm_id: Optional[str] = Form(None, description="Optional target farm ID/UUID"),
+    uid: Optional[str] = Form(None, description="User UID from Supabase Auth"),
+    user_id: Optional[str] = Form(None, description="Alternative alias for User UID"),
     return_audio_base64: Optional[bool] = Form(False, description="Whether to return inline base64 audio")
 ):
     """
@@ -550,6 +565,12 @@ async def chat_audio_upload_endpoint(
         }
 
     # 2. Process with LLM Router
+    # Resolve Authenticated User & Farm Context via UID / Token / Header / Form
+    extracted_uid = extract_uid_from_request(http_req, explicit_uid=uid, explicit_user_id=user_id)
+    auth_ctx = await resolve_user_farm(uid=extracted_uid, explicit_farm_id=farm_id)
+    effective_farm_id = auth_ctx.get("farm_id") or farm_id
+    user_name = auth_ctx.get("user_name")
+
     session_id = await session_manager.get_or_create_session(session_id)
     history = await session_manager.get_recent_history(session_id)
 
@@ -565,7 +586,7 @@ async def chat_audio_upload_endpoint(
             user_text=transcribed_text,
             history=history,
             session_id=session_id,
-            farm_id=farm_id,
+            farm_id=effective_farm_id,
             detected_language=detected_lang
         )
     except Exception as e:
@@ -615,7 +636,9 @@ async def chat_audio_upload_endpoint(
         "stt_confidence": confidence,
         "duration": stt_res.get("duration", 0),
         "tool_meta": tool_meta if (tool_meta and tool_meta.get("executed")) else None,
-        "proof_images": proof_images
+        "proof_images": proof_images,
+        "farm_id": effective_farm_id,
+        "user_name": user_name
     }
 
 # =========================================================================

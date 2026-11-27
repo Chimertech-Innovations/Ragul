@@ -161,33 +161,39 @@ async def get_farm_overview(farm_id: Optional[str] = None, target_date: Optional
 
     today_rows = []
     if f_id:
-        today_rows = await supabase_db.fetch_all(
-            """
-            SELECT activity_id, camera_id, cattle_id, confidence_score, description, start_time,
-                   captured_image_storage_path, captured_video_storage_path, ai_detection_result, activity_type,
-                   disease_status, bcs_score, breed
-            FROM public.farm_activities
-            WHERE farm_id::text = $1 AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $2::date
-            ORDER BY start_time DESC;
-            """,
-            f_id,
-            datetime.date.fromisoformat(today_str),
-        )
+        try:
+            today_rows = await supabase_db.fetch_all(
+                """
+                SELECT activity_id, camera_id, cattle_id, confidence_score, description, start_time,
+                       captured_image_storage_path, captured_video_storage_path, ai_detection_result, activity_type,
+                       disease_status, bcs_score, breed
+                FROM public.farm_activities
+                WHERE farm_id::text = $1 AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $2::date
+                ORDER BY start_time DESC;
+                """,
+                f_id,
+                datetime.date.fromisoformat(today_str),
+            )
+        except Exception:
+            today_rows = []
 
     yesterday_rows = []
     if f_id:
-        yesterday_rows = await supabase_db.fetch_all(
-            """
-            SELECT activity_id, camera_id, cattle_id, confidence_score, description, start_time,
-                   captured_image_storage_path, captured_video_storage_path, ai_detection_result, activity_type,
-                   disease_status, bcs_score, breed
-            FROM public.farm_activities
-            WHERE farm_id::text = $1 AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $2::date
-            ORDER BY start_time DESC;
-            """,
-            f_id,
-            datetime.date.fromisoformat(yesterday_str),
-        )
+        try:
+            yesterday_rows = await supabase_db.fetch_all(
+                """
+                SELECT activity_id, camera_id, cattle_id, confidence_score, description, start_time,
+                       captured_image_storage_path, captured_video_storage_path, ai_detection_result, activity_type,
+                       disease_status, bcs_score, breed
+                FROM public.farm_activities
+                WHERE farm_id::text = $1 AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $2::date
+                ORDER BY start_time DESC;
+                """,
+                f_id,
+                datetime.date.fromisoformat(yesterday_str),
+            )
+        except Exception:
+            yesterday_rows = []
 
     target_rows = (
         today_rows
