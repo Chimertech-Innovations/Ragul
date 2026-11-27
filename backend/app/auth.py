@@ -83,13 +83,14 @@ async def resolve_user_farm(
 ) -> Dict[str, Any]:
     """
     Resolves the authentic user and their assigned farm data from Supabase:
-    1. If UID is provided:
-       - Queries public.users for the matching user record
+    1. If UID is provided (via JWT token, custom header, or param):
+       - Queries public.users for the matching user record (by uid or integer id)
        - Queries public.farms for the farm owned by that user (user_id = users.id)
-    2. If explicit farm_id is provided, checks public.farms directly
-    3. Fallback: Resolves to the first available farm in the database
+       - If user not found, returns clear unauthenticated error (no silent fallback).
+    2. If explicit farm_id is provided, checks public.farms directly (for guest/demo access).
+    3. If neither is provided, returns clear authentication required error.
     """
-    # 1. Resolve by UID
+    # 1. Resolve by authentic UID
     if _is_valid_id(uid):
         clean_uid = str(uid).strip()
         try:
@@ -102,42 +103,59 @@ async def resolve_user_farm(
                 """,
                 clean_uid
             )
-            if user:
-                farm = await supabase_db.fetch_one(
-                    """
-                    SELECT id as farm_id, farm_name, address, district, state 
-                    FROM public.farms 
-                    WHERE user_id = $1 
-                    LIMIT 1;
-                    """,
-                    user["id"]
-                )
-                if farm:
-                    logger.info(f"[Auth] UID '{clean_uid}' authenticated -> User '{user.get('name')}', Farm '{farm.get('farm_name')}' (ID: {farm.get('farm_id')})")
-                    return {
-                        "authenticated": True,
-                        "uid": user.get("uid") or clean_uid,
-                        "user_id": user.get("id"),
-                        "user_name": user.get("name"),
-                        "farm_id": str(farm.get("farm_id")),
-                        "farm_name": farm.get("farm_name"),
-                        "location": f"{farm.get('district', '')}, {farm.get('state', '')}".strip(", ")
-                    }
-                else:
-                    logger.warning(f"[Auth] UID '{clean_uid}' found in public.users, but no farm linked to user_id {user['id']}")
-                    return {
-                        "authenticated": True,
-                        "uid": user.get("uid") or clean_uid,
-                        "user_id": user.get("id"),
-                        "user_name": user.get("name"),
-                        "farm_id": "",
-                        "farm_name": "Unassigned Farm",
-                        "location": ""
-                    }
-        except Exception as e:
-            logger.error(f"[Auth] Error querying user by UID '{clean_uid}': {e}")
+            if not user:
+                logger.warning(f"[Auth] UID '{clean_uid}' was provided but does not exist in public.users")
+                return {
+                    "authenticated": False,
+                    "uid": clean_uid,
+                    "user_id": None,
+                    "user_name": None,
+                    "farm_id": None,
+                    "farm_name": None,
+                    "error": f"Invalid User UID: No account found with UID '{clean_uid}' in Supabase."
+                }
 
-    # 2. Resolve by explicit farm_id
+            # User found, now fetch their registered farm
+            farm = await supabase_db.fetch_one(
+                """
+                SELECT id as farm_id, farm_name, address, district, state 
+                FROM public.farms 
+                WHERE user_id = $1 
+                LIMIT 1;
+                """,
+                user["id"]
+            )
+            if farm:
+                logger.info(f"[Auth] UID '{clean_uid}' authenticated -> User '{user.get('name')}', Farm '{farm.get('farm_name')}' (ID: {farm.get('farm_id')})")
+                return {
+                    "authenticated": True,
+                    "uid": user.get("uid") or clean_uid,
+                    "user_id": user.get("id"),
+                    "user_name": user.get("name") or "Farmer",
+                    "farm_id": str(farm.get("farm_id")),
+                    "farm_name": farm.get("farm_name", "Registered Farm"),
+                    "location": f"{farm.get('district', '')}, {farm.get('state', '')}".strip(", ")
+                }
+            else:
+                logger.warning(f"[Auth] User '{user.get('name')}' (ID: {user['id']}) has no farm linked in public.farms")
+                return {
+                    "authenticated": True,
+                    "uid": user.get("uid") or clean_uid,
+                    "user_id": user.get("id"),
+                    "user_name": user.get("name") or "Farmer",
+                    "farm_id": None,
+                    "farm_name": "No Farm Registered",
+                    "location": "",
+                    "error": f"User '{user.get('name')}' is authenticated, but no farm is registered under this account yet."
+                }
+        except Exception as e:
+            logger.error(f"[Auth] Database error querying user by UID '{clean_uid}': {e}")
+            return {
+                "authenticated": False,
+                "error": f"Database error resolving user UID: {str(e)}"
+            }
+
+    # 2. Resolve by explicit farm_id (Direct testing or guest farm access)
     if _is_valid_id(explicit_farm_id):
         clean_fid = str(explicit_farm_id).strip()
         try:
@@ -150,36 +168,30 @@ async def resolve_user_farm(
                     "authenticated": False,
                     "uid": None,
                     "user_id": None,
-                    "user_name": "Farmer",
+                    "user_name": "Guest Farmer",
                     "farm_id": str(farm.get("farm_id")),
-                    "farm_name": farm.get("farm_name"),
+                    "farm_name": farm.get("farm_name", f"Farm {clean_fid}"),
                     "location": f"{farm.get('district', '')}, {farm.get('state', '')}".strip(", ")
+                }
+            else:
+                return {
+                    "authenticated": False,
+                    "error": f"Farm ID '{clean_fid}' not found in database."
                 }
         except Exception as e:
             logger.error(f"[Auth] Error querying farm by ID '{clean_fid}': {e}")
-
-    # 3. Default Fallback
-    try:
-        first_farm = await supabase_db.fetch_one("SELECT id as farm_id, farm_name, district, state FROM public.farms ORDER BY id ASC LIMIT 1")
-        if first_farm:
             return {
                 "authenticated": False,
-                "uid": None,
-                "user_id": None,
-                "user_name": "Farmer",
-                "farm_id": str(first_farm.get("farm_id")),
-                "farm_name": first_farm.get("farm_name", "Dairy Farm"),
-                "location": f"{first_farm.get('district', '')}, {first_farm.get('state', '')}".strip(", ")
+                "error": f"Database error resolving farm_id: {str(e)}"
             }
-    except Exception:
-        pass
 
+    # 3. Clean Authentication Required (No silent fallback to arbitrary users)
     return {
         "authenticated": False,
         "uid": None,
         "user_id": None,
-        "user_name": "Farmer",
-        "farm_id": "",
-        "farm_name": "Dairy Farm",
-        "location": ""
+        "user_name": None,
+        "farm_id": None,
+        "farm_name": None,
+        "error": "Authentication required: Please provide a valid Supabase Auth Bearer token, 'uid', or 'farm_id' to access farm data."
     }

@@ -129,6 +129,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     status: str = "success"
+    authenticated: bool = True
     session_id: str
     user_text: str
     response: str
@@ -138,7 +139,9 @@ class ChatResponse(BaseModel):
     proof_images: Optional[List[Dict[str, Any]]] = None
     detected_language: str
     stt_confidence: Optional[float] = None
+    uid: Optional[str] = None
     farm_id: Optional[str] = None
+    farm_name: Optional[str] = None
     user_name: Optional[str] = None
 
 class TTSRequest(BaseModel):
@@ -436,8 +439,12 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
     # Resolve Authenticated User & Farm Context via UID / Token / Header
     extracted_uid = extract_uid_from_request(http_req, explicit_uid=request.uid, explicit_user_id=request.user_id)
     auth_ctx = await resolve_user_farm(uid=extracted_uid, explicit_farm_id=request.farm_id)
+    if auth_ctx.get("error"):
+        raise HTTPException(status_code=401, detail=auth_ctx["error"])
+
     effective_farm_id = auth_ctx.get("farm_id") or request.farm_id
     user_name = auth_ctx.get("user_name")
+    is_authenticated = auth_ctx.get("authenticated", False)
 
     session_id = await session_manager.get_or_create_session(request.session_id)
     history = await session_manager.get_recent_history(session_id)
@@ -497,6 +504,7 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
 
     return ChatResponse(
         status="success",
+        authenticated=is_authenticated,
         session_id=session_id,
         user_text=user_text,
         response=response_text,
@@ -506,7 +514,9 @@ async def chat_endpoint(http_req: Request, request: ChatRequest):
         proof_images=proof_images,
         detected_language=detected_lang,
         stt_confidence=stt_conf,
+        uid=auth_ctx.get("uid"),
         farm_id=effective_farm_id,
+        farm_name=auth_ctx.get("farm_name"),
         user_name=user_name
     )
 
@@ -568,8 +578,12 @@ async def chat_audio_upload_endpoint(
     # Resolve Authenticated User & Farm Context via UID / Token / Header / Form
     extracted_uid = extract_uid_from_request(http_req, explicit_uid=uid, explicit_user_id=user_id)
     auth_ctx = await resolve_user_farm(uid=extracted_uid, explicit_farm_id=farm_id)
+    if auth_ctx.get("error"):
+        raise HTTPException(status_code=401, detail=auth_ctx["error"])
+
     effective_farm_id = auth_ctx.get("farm_id") or farm_id
     user_name = auth_ctx.get("user_name")
+    is_authenticated = auth_ctx.get("authenticated", False)
 
     session_id = await session_manager.get_or_create_session(session_id)
     history = await session_manager.get_recent_history(session_id)
@@ -626,6 +640,7 @@ async def chat_audio_upload_endpoint(
 
     return {
         "status": "success",
+        "authenticated": is_authenticated,
         "session_id": session_id,
         "transcript": transcribed_text,
         "response": response_text,
@@ -637,7 +652,9 @@ async def chat_audio_upload_endpoint(
         "duration": stt_res.get("duration", 0),
         "tool_meta": tool_meta if (tool_meta and tool_meta.get("executed")) else None,
         "proof_images": proof_images,
+        "uid": auth_ctx.get("uid"),
         "farm_id": effective_farm_id,
+        "farm_name": auth_ctx.get("farm_name"),
         "user_name": user_name
     }
 
