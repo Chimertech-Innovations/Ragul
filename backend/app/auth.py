@@ -4,10 +4,24 @@ import base64
 import logging
 from typing import Optional, Dict, Any
 from fastapi import Request
-import jwt
 from .database.supabase_client import supabase_db
 
 logger = logging.getLogger("ragul_auth")
+
+def _decode_jwt_payload_safe(token: str) -> Optional[Dict[str, Any]]:
+    """Safely decodes JWT payload using standard Python base64 & json (zero third-party dependencies)."""
+    try:
+        parts = token.split(".")
+        if len(parts) >= 2:
+            payload_b64 = parts[1]
+            rem = len(payload_b64) % 4
+            if rem > 0:
+                payload_b64 += "=" * (4 - rem)
+            decoded = base64.urlsafe_b64decode(payload_b64.encode("ascii"))
+            return json.loads(decoded.decode("utf-8"))
+    except Exception as e:
+        logger.debug(f"[Auth] Standard JWT payload decode notice: {e}")
+    return None
 
 def extract_uid_from_request(
     request: Request,
@@ -42,17 +56,14 @@ def extract_uid_from_request(
 
         # Check if token is a 3-part JWT
         if token.count(".") == 2:
-            try:
-                # Decode without verification first to extract 'sub' / 'user_id'
-                payload = jwt.decode(token, options={"verify_signature": False})
+            payload = _decode_jwt_payload_safe(token)
+            if payload:
                 jwt_uid = payload.get("sub") or payload.get("user_id") or payload.get("uid")
                 if jwt_uid:
                     logger.info(f"[Auth] Extracted UID from JWT token: {jwt_uid}")
                     return str(jwt_uid)
-            except Exception as e:
-                logger.warning(f"[Auth] Could not decode JWT token: {e}")
 
-        # If not a valid JWT, token is passed as raw UID
+        # If not a valid JWT, token is passed as raw UID string
         if token:
             return token
 
