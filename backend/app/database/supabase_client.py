@@ -3,12 +3,33 @@ import asyncio
 import logging
 import asyncpg
 from typing import Optional, List, Dict, Any
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Search for .env in current directory, backend/.env, or parent directory
+for env_candidate in [Path.cwd() / ".env", Path.cwd() / "backend" / ".env", Path(__file__).resolve().parent.parent.parent / ".env"]:
+    if env_candidate.exists():
+        load_dotenv(env_candidate)
+        break
+else:
+    load_dotenv()
+
 logger = logging.getLogger("ragul_supabase_client")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+def get_clean_database_url() -> str:
+    """
+    Returns an IPv4-compatible PostgreSQL connection string.
+    Supabase's direct endpoint ('db.<project_ref>.supabase.co:5432') resolves strictly to IPv6.
+    Render and standard cloud containers are IPv4-only, causing '[Errno 101] Network is unreachable'.
+    This automatically transforms the URL to Supabase's IPv4 connection pooler.
+    """
+    dsn = os.getenv("DATABASE_URL", "").strip()
+    if "db.gzklovtyqonpmwwdhrpx.supabase.co" in dsn:
+        logger.info("[SupabaseClient] Translating direct IPv6 host to IPv4 Supabase pooler for cloud host compatibility...")
+        dsn = dsn.replace("db.gzklovtyqonpmwwdhrpx.supabase.co", "aws-0-ap-northeast-1.pooler.supabase.com")
+        if "shanjith_intern2026:" in dsn:
+            dsn = dsn.replace("shanjith_intern2026:", "shanjith_intern2026.gzklovtyqonpmwwdhrpx:")
+    return dsn
 
 class SupabasePoolManager:
     _pool: Optional[asyncpg.Pool] = None
@@ -18,15 +39,16 @@ class SupabasePoolManager:
     async def get_pool(cls) -> asyncpg.Pool:
         current_loop = asyncio.get_running_loop()
         if cls._pool is None or cls._loop != current_loop:
-            if not DATABASE_URL:
-                raise ValueError("DATABASE_URL is not set in .env")
+            dsn = get_clean_database_url()
+            if not dsn:
+                raise ValueError("DATABASE_URL is not set in environment or .env")
             try:
                 cls._pool = await asyncpg.create_pool(
-                    dsn=DATABASE_URL,
+                    dsn=dsn,
                     min_size=2,
                     max_size=10,
-                    timeout=15,
-                    command_timeout=15
+                    timeout=10,
+                    command_timeout=10
                 )
                 cls._loop = current_loop
                 logger.info("[SupabaseClient] Connected successfully to Supabase PostgreSQL pool.")
